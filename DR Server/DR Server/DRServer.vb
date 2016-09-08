@@ -5,27 +5,35 @@ Imports System.Text
 Imports System.Threading
 Imports System.IO
 Imports System.ServiceProcess
+Imports System.Timers
 Module DRServer
 
     Dim conn As New MySqlConnection
     Const port As Integer = 55001
-    Dim output As String = ""
+    Dim output As String = String.Empty
+    Dim serviceStatus As String
     Dim sep As String = "------------------------------------------------------"
+    Dim cpuLoad As String = "0"
+    Dim cpuCount As Int16 = 0
+    Dim cpuUsage = New PerformanceCounter("Processor", "% Processor Time", "_Total")
 
     Public Function GetComputerName() As String
         Dim ComputerName As String
         ComputerName = System.Net.Dns.GetHostName
         Return ComputerName
     End Function
-    Private Function getCPU() As String
-        Dim cpuUsage = New PerformanceCounter("Processor", "% Processor Time", "_Total")
-        cpuUsage.NextValue()
-        Thread.Sleep(1000)
-        Return (cpuUsage.NextValue())
-    End Function
-    Public Function GetComputerIP() As IPAddress
-        Dim ipAddress As IPAddress = System.Net.Dns.GetHostEntry("localhost").AddressList(0)
-        Return ipAddress
+    Public Function GetComputerIP() As String
+        Dim GetIPv4Address As String = String.Empty
+        Dim strHostName As String = System.Net.Dns.GetHostName()
+        Dim iphe As System.Net.IPHostEntry = System.Net.Dns.GetHostEntry(strHostName)
+
+        For Each ipheal As System.Net.IPAddress In iphe.AddressList
+            If ipheal.AddressFamily = System.Net.Sockets.AddressFamily.InterNetwork Then
+                GetIPv4Address = ipheal.ToString()
+            End If
+        Next
+
+        Return GetIPv4Address
     End Function
     Public Sub connectDB()
         Dim DatabaseName As String = "dr_manager"
@@ -46,32 +54,41 @@ Module DRServer
 
         'conn.Close()
     End Sub
-    'Private Function getServices() As DataSet
-    '    Dim query As String = "SELECT * FROM services"
-    '    Dim cmd As New MySqlCommand()
-    '    Dim serviceList As ArrayList
+    Private Function getServices() As String
+        Dim query As String = "SELECT * FROM services"
+        Dim cmd As New MySqlCommand()
 
-    '    Try
-    '        'conn.Open()
-    '        cmd.Connection = conn
+        Try
+            'conn.Open()
+            cmd.Connection = conn
 
-    '        cmd.CommandText = query
-    '        cmd.Prepare()
+            cmd.CommandText = query
 
-    '        Dim reader As MySqlDataReader = cmd.ExecuteReader()
+            Dim reader As MySqlDataReader = cmd.ExecuteReader()
 
-    '        While reader.Read()
-    '            serviceList.Add(reader.GetString(1))
-    '        End While
+            While reader.Read()
+                Dim srv As String = reader.GetString(1)
+                If srv IsNot Nothing Then
+                    Try
+                        Dim sc = New System.ServiceProcess.ServiceController(srv)
+                        sc.Refresh()
+                        serviceStatus &= srv & "=" & sc.Status & ";"
+                    Catch ex As Exception
+                        serviceStatus &= srv & "=notfound" & ";"
+                    End Try
+                End If
+            End While
 
-    '        'conn.Close()
+            reader.Close()
+            'conn.Close()
+        Catch ex As MySqlException
+            Console.WriteLine("Error: " & ex.ToString())
+        End Try
 
-    '    Catch ex As MySqlException
-    '        Console.WriteLine("Error: " & ex.ToString())
-    '    End Try
-    'End Function
+        Return serviceStatus
+    End Function
     Public Sub insertData()
-        Dim query As String = "INSERT IGNORE INTO dr(name, status) VALUES(@Name, @Status);"
+        Dim query As String = "INSERT IGNORE INTO dr(name, status, ip) VALUES(@Name, @Status, @Ip);"
 
         Dim cmd As New MySqlCommand()
 
@@ -84,6 +101,8 @@ Module DRServer
 
             cmd.Parameters.AddWithValue("@Name", GetComputerName())
             cmd.Parameters.AddWithValue("@Status", "0")
+            cmd.Parameters.AddWithValue("@Ip", GetComputerIP())
+
             cmd.ExecuteNonQuery()
 
             'conn.Close()
@@ -93,25 +112,29 @@ Module DRServer
         End Try
     End Sub
     Public Sub setData()
-        Dim query As String = "UPDATE dr SET status=@Status, cpu=@Cpu WHERE name=@Name;"
+        serviceStatus = String.Empty
+        getServices()
+
+        Dim query As String = "UPDATE dr SET status=@Status, cpu=@Cpu, services=@Services, ip=@Ip WHERE name=@Name;"
 
         Dim cmd As New MySqlCommand()
 
         Try
-            'conn.Open()
+            ' conn.Open()
             cmd.Connection = conn
 
             cmd.CommandText = query
             cmd.Prepare()
 
             cmd.Parameters.AddWithValue("@Name", GetComputerName())
-            cmd.Parameters.AddWithValue("@Status", "555")
-            cmd.Parameters.AddWithValue("@Cpu", getCPU())
+            cmd.Parameters.AddWithValue("@Status", "0")
+            cmd.Parameters.AddWithValue("@Cpu", cpuLoad)
+            cmd.Parameters.AddWithValue("@Services", serviceStatus)
+            cmd.Parameters.AddWithValue("@Ip", GetComputerIP())
 
             cmd.ExecuteNonQuery()
 
             'conn.Close()
-
         Catch ex As MySqlException
             Console.WriteLine("Error: " & ex.ToString())
         End Try
@@ -227,13 +250,25 @@ Module DRServer
         End While
 
     End Sub
+    WithEvents cpuTimer As New System.Timers.Timer
+    Private Sub tick(ByVal sender As Object, ByVal e As System.Timers.ElapsedEventArgs) Handles cpuTimer.Elapsed
+        If cpuCount = 1 Then
+            cpuLoad = cpuUsage.NextValue().ToString
+            cpuCount = 0
+        Else
+            cpuCount += 1
+        End If
+    End Sub
     Sub Main()
+        cpuTimer.Interval = 1000
+        AddHandler cpuTimer.Elapsed, AddressOf tick
+        cpuTimer.Start()
+
         connectDB()
         insertData()
         Console.WriteLine("DR SERVER")
         Console.WriteLine("")
 
         createListener()
-
     End Sub
 End Module
