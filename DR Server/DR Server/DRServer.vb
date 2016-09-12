@@ -13,7 +13,7 @@ Module DRServer
     Dim output As String = String.Empty
     Dim serviceStatus As String
     Dim sep As String = "------------------------------------------------------"
-    Dim cpuLoad As String = "0"
+    Dim cpuLoad As String = 0
     Dim cpuCount As Int16 = 0
     Dim cpuUsage = New PerformanceCounter("Processor", "% Processor Time", "_Total")
 
@@ -199,6 +199,10 @@ Module DRServer
                     Console.WriteLine("CHALLANGE")
                     setData()
                     mstrResponse = "OK"
+                Case "EXIT"
+                    Console.WriteLine("EXIT")
+                    Environment.Exit(0)
+                    mstrResponse = "OK"
             End Select
 
             Console.WriteLine(mstrResponse)
@@ -253,7 +257,8 @@ Module DRServer
     WithEvents cpuTimer As New System.Timers.Timer
     Private Sub tick(ByVal sender As Object, ByVal e As System.Timers.ElapsedEventArgs) Handles cpuTimer.Elapsed
         If cpuCount = 1 Then
-            cpuLoad = cpuUsage.NextValue().ToString
+            cpuLoad = Int(cpuUsage.NextValue().ToString).ToString
+
             cpuCount = 0
         Else
             cpuCount += 1
