@@ -1,0 +1,83 @@
+<!doctype html>
+<html ng-app="app">
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DR Manager</title>
+    <!--<link rel="stylesheet" type="text/css" href="css/template.css">-->
+    <script type="text/javascript" src="https://code.angularjs.org/1.5.8/angular.min.js"></script>
+    <script type="text/javascript" src="https://code.angularjs.org/1.5.8/angular-route.min.js"></script>
+    <script type="text/javascript" src="https://code.angularjs.org/1.5.8/angular-sanitize.min.js"></script>
+    <script type="text/javascript" src="js/app.js"></script>
+    <script src="http://code.jquery.com/jquery-latest.js"></script>
+    <script type="text/javascript" src="js/bootstrap.min.js"></script>
+	<script type="text/javascript" src="js/ui-bootstrap-tpls-2.1.3.min.js"></script>
+    <link href="css/bootstrap.css" rel="stylesheet" type="text/css">
+	<link href="css/template.css" rel="stylesheet" type="text/css">
+    <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+		<script src="https://oss.maxcdn.com/html5shiv/3.7.2/html5shiv.min.js"></script>
+		<script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+	<![endif]-->
+</head>
+
+<body>
+
+<div class="header">
+<div class="container">
+<div class="navbar-header">
+        <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar3">
+          <span class="sr-only">Toggle navigation</span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+        </button>
+        <img src="img/visco_logo.svg" class="logo">  <span class="head-title  hidden-xs">DR Manager</span>
+      </div>
+	<div id="navbar3" class="navbar-collapse collapse">
+        <ul class="nav navbar-nav navbar-right">
+          <li class="active"><a href="#/">Home</a></li>
+		  <li class="active"><a href="#/">Admin</a></li>
+          <li><a href="#">About</a></li>
+		  <li><a href="" ng-show="!userInfo.logged" ng-click="logIn()">Log In</a></li>
+          <li class="dropdown" ng-show="userInfo.logged">
+            <a href="" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">User <span class="caret"></span></a>
+            <ul class="dropdown-menu" role="menu">
+              <li class="dropdown-header">{{userInfo.user}}</li>
+			   <li class="divider"></li>
+			  <li><a href="" ng-click="logOut()">Log Out</a></li>         
+            </ul>
+          </li>
+        </ul>
+      </div>
+	 </div>
+	</div>	
+    <div class="container">
+	
+		<div ng-show="userInfo.error" class="alert alert-danger alert-dismissible" role="alert">
+			<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+			{{userInfo.error}}
+		</div>
+		<div ng-show="userInfo.msg" class="alert alert-info alert-dismissible" role="alert">
+			<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+			{{userInfo.msg}}
+		</div>
+	
+           <div ng-view ng-show="userInfo.logged"></div>
+
+            <hr>
+
+            <div class="footer">
+                <p>&copy; 2016 VISCO CG - All rights reserved.</p>
+            </div>
+
+        </div>
+
+    </div>
+
+</body>
+
+</html>

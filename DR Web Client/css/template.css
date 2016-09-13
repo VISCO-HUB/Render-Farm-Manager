@@ -1,0 +1,46 @@
+/* TEMPLARE CSS */
+
+.nav > li > a {
+    padding-top: 30px;
+    padding-bottom: 30px;
+	color: #FFF;
+}
+
+
+.nav > li > a:hover {
+	color: #222;
+}
+
+.header {
+	background: #222222;
+	margin-bottom: 30px;
+}
+
+.logo{
+	height: 44px;
+	margin: 16px;
+	position: absolute;
+	float: left;
+}
+
+.head-title{
+	color: #A7A9AC; 
+	font-size: 20px; 	
+	padding: 26px 0 0 130px;
+	display: inline-block;
+	vertical-align: top;
+}
+
+* {
+	border-radius: 0 !important;
+	outline: 0 !important;
+}
+
+tr:hover th
+{
+	background-color: #FFF !important;
+}
+
+tr td {
+	cursor: pointer;
+}

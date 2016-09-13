@@ -1,0 +1,27 @@
+<button type="button" class="btn btn-success" ng-click="sendChallange()">Update</button>	
+<br><br>
+<table class="table table-hover">
+	<th width="25px">#</th><th>Name</th><th>User</th><th>Service</th><th>CPU</th>
+	<tr  ng-repeat="node in dr" ip="{{node.ip}}" ng-show="socketResponse[node.ip] != 'DISCONNECTED'" ng-model="checkModel['{{node.ip}}']" uib-btn-checkbox>
+		<td>{{$index + 1}}.</td>
+		<td><a href="" uib-tooltip="IP: {{node.ip}}">{{node.name}}</a></td>
+		<td>
+			{{node.user}}
+		</td>
+		<td>
+			{{getUsedServices(node.services)}}
+		</td>
+		<td>
+		<div class="progress" style="margin-bottom: 0;">		
+		  <div class="progress-bar progress-bar-striped active" ng-style="{'width': node.cpu + '%'}" ng-class="{'progress-bar-success': node.cpu > 0, 'progress-bar-warning': node.cpu > 33, 'progress-bar-danger': node.cpu > 66}">{{node.cpu}}%</div>		 		
+		</div>
+		</td>
+	</tr>
+</table>
+
+<button type="button" class="btn btn-primary">Get Nodes</button>	
+<button type="button" class="btn btn-danger">Drop Nodes</button>	
+
+
+
+

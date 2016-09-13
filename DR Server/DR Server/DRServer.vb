@@ -151,7 +151,7 @@ Module DRServer
 
             sc.Start()
 
-                Return name
+            Return name
             Catch
                 Return "Error"
         End Try
