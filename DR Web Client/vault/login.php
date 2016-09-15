@@ -9,7 +9,7 @@
 	SESSION_START();
 		
 	FUNCTION AUTH() {
-		HEADER('WWW-Authenticate: Basic realm="DR Manager"');
+		HEADER('WWW-Authenticate: Basic realm="Login:"');
 		HEADER('HTTP/1.0 401 Unauthorized');
 		$JSON['error'] = 'Please enter correct e-mail and password!';
 		ECHO JSON_ENCODE($JSON);

@@ -1,7 +1,5 @@
 <?php
 
-
-
 INCLUDE 'config.php';
 
 
@@ -16,10 +14,6 @@ $TCP = 'tcp://' . $IP;
 $SOCKET = FSOCKOPEN($TCP,$PORT,$ERRNO, $ERRSTR, 1);
 
 IF(!$SOCKET){DIE ('DISCONNECTED');}
-
-//$CMD = 'STARTSERVICE:TeamViewer';
-//$CMD = 'STOPSERVICE:TeamViewer';
-//$CMD = 'CHALLANGE';
 
 FPUTS($SOCKET, $CMD);
 ECHO FGETS($SOCKET, 255);

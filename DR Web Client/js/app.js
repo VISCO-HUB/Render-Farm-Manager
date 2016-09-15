@@ -1,5 +1,5 @@
 /* APP */
-var app = angular.module('app', ['ngRoute', 'ngSanitize', 'ui.bootstrap']);
+var app = angular.module('app', ['ngRoute', 'ngSanitize', 'ui.bootstrap', 'ngAnimate']);
 
 
 // CONFIG 
@@ -18,18 +18,46 @@ app.config(function($routeProvider) {
 
 // CONTROLLERS
 
-app.controller("homeCtrl", function ($scope, vault, $timeout) {
+app.controller("homeCtrl", function ($scope, vault, $timeout, $rootScope) {
 	// sendChallange 
 	$scope.sendChallange = function(){
 		vault.sendChallenge();
+		$scope.search = '';
 	}
 	
 	$scope.stopService = function(name){
 		vault.stopService(name);
 	}
 	
+	$scope.getNodes = function()
+	{
+		vault.getNodes();
+	}
+	$scope.deleteMsg = function()
+	{
+		$rootScope.showMsg = {};
+	}
+	
+	$scope.dropNodes = function()
+	{		
+		vault.dropNodes();
+	}
+	
+	$scope.isReserved = function(user)
+	{
+		return user != $rootScope.userInfo.user && user != null;
+	}
+	
+	//$scope.orderNodes = 'name';
+	$scope.reverse = true;
+	
+	$scope.orderByParam = function(x) {
+		$scope.reverse = !$scope.reverse;
+		$scope.orderNodes = x;
+	}
+	
 	//	GET RUNNINI SERVICES
-	$scope.getUsedServices = function(services){					
+	/*$scope.getUsedServices = function(services){					
 		var serviceInfo = "";
 		angular.forEach(services.split(';'), function(value, key){					
 			var d = value.split('=');			
@@ -39,16 +67,16 @@ app.controller("homeCtrl", function ($scope, vault, $timeout) {
 			return serviceInfo;
 		});		
 		return serviceInfo;
-	}
+	}*/
 		
 	vault.getDR();
 
-	 $scope.checkModel = {};
+	$rootScope.checkModel = {};
 	$scope.$watchCollection('checkModel', function () {
-		$scope.checkResults = [];
-		angular.forEach($scope.checkModel, function (value, key) {
+		$rootScope.checkResults = [];
+		angular.forEach($rootScope.checkModel, function (value, key) {
 		  if (value) {
-			$scope.checkResults.push(key);
+			$rootScope.checkResults.push(key);
 		  }
 		});
 	  });	
@@ -61,6 +89,7 @@ app.run( function($rootScope, $location, $routeParams, vault) {
      function(a){
 		// INIT
 		$rootScope.socketResponse = {};
+		$rootScope.showMsg = {};
 		$rootScope.logIn = function(){vault.logIn();}
 		$rootScope.logOut = function(){vault.logOut();}
 		
@@ -69,6 +98,44 @@ app.run( function($rootScope, $location, $routeParams, vault) {
 });
 // SERVICES
 app.service('vault', function($http, $rootScope, $timeout) {
+	// MESSAGES
+	var showMsg = function(r)
+	{
+		$rootScope.showMsg = {};
+		
+		switch(r.message)
+		{
+			case 'ERROR': $rootScope.showMsg.error = 'MySQL connection error :( ...';
+			break;
+			case 'RESTRICTED': $rootScope.showMsg.warn = 'This user restricted!';
+			break;
+			case 'NODESDROPPED':   
+			{
+				if($rootScope.checkResults.length)
+				{	
+					$rootScope.showMsg.success = 'Success. All nodes are dropped!'; 
+				}
+				else
+				{
+					$rootScope.showMsg.error = 'You have no reserved nodes for drop!'; 					
+				}					
+			}
+			break;
+			case 'NODESRESERVED':  
+				if(r.cnt > 0)
+				{
+					$rootScope.showMsg.success = 'Success! ' + r.cnt + ' nodes reserved!';
+				}
+				else
+				{
+					$rootScope.showMsg.error = 'No nodes reserved!';
+				}
+			break;
+			case 'NONODES':  $rootScope.showMsg.warn = 'Please select at leaset one node!';
+			break;
+		}
+	}
+	
 	// SIMPLIFY POST PROCEDURE
 	var HttpPost = function(file, json)
 	{		
@@ -87,7 +154,12 @@ app.service('vault', function($http, $rootScope, $timeout) {
 	// GET DR
 	var getDR = function()
 	{
-		httpGet('getDR').success(function(r){$rootScope.dr = r});		 			
+		httpGet('getDR').success(function(r){
+			$rootScope.dr = r;
+			angular.forEach(r, function(value, key){					
+				$rootScope.checkModel[value.ip] = value.user == $rootScope.userInfo.user;								
+			});			
+		});		 			
 	}
 	
 	// WORK WITH SOCKET
@@ -135,7 +207,6 @@ app.service('vault', function($http, $rootScope, $timeout) {
 	var logIn = function()
 	{			
 		httpGet('login').success(function(r){			
-			console.log($rootScope.userInfo);
 			if(!r.logged) 
 			{
 				if($rootScope.userInfo)
@@ -165,14 +236,35 @@ app.service('vault', function($http, $rootScope, $timeout) {
 		
 	}
 	
+	var getNodes = function()
+	{		
+		var json = $rootScope.checkResults;
+		HttpPost('getNodes', json).then(function(r){
+			showMsg(r.data);				
+			getDR();			
+		}, 
+		function(r){			
+			console.log(r);
+		});	
+	}
 	
+	var dropNodes = function()
+	{	
+		httpGet('dropNodes').success(function(r){
+			showMsg(r);
+			getDR();			
+		});	
+	}
+		
   return {
     socket: socket,
 	sendChallenge: sendChallenge,
 	getDR: getDR,
 	stopService: stopService,
 	logIn: logIn,
-	logOut: logOut
+	logOut: logOut,
+	getNodes: getNodes,
+	dropNodes: dropNodes
   };
 
 

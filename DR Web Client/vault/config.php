@@ -15,6 +15,7 @@
 	// ALLOWED USERS
 	$ALLOWED_USERS = [
 		'v.lukyanenko@visco.no', 
-		'v.zabolotnyi@visco.no'		
+		'o.labintsev@visco.no',
+		'e.astafiev@visco.no'		
 	];
 ?>
