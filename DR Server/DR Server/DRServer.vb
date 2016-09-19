@@ -10,11 +10,15 @@ Module DRServer
 
     Dim conn As New MySqlConnection
     Const port As Integer = 55001
+    Dim busyTime = 2 '2 hrs
     Dim output As String = String.Empty
     Dim serviceStatus As String
     Dim sep As String = "------------------------------------------------------"
     Dim cpuLoad As String = 0
     Dim cpuCount As Int16 = 0
+    Dim busyCnt As Int16 = 0
+    Dim BACKBURNERSRV As String = "BACKBURNER_SRV_200"
+
     Dim cpuUsage = New PerformanceCounter("Processor", "% Processor Time", "_Total")
 
     Public Function GetComputerName() As String
@@ -54,9 +58,10 @@ Module DRServer
 
         'conn.Close()
     End Sub
-    Private Function getServices() As String
+    Private Function getServices() As ArrayList
         Dim query As String = "SELECT * FROM services"
         Dim cmd As New MySqlCommand()
+        Dim services As New ArrayList
 
         Try
             'conn.Open()
@@ -73,6 +78,7 @@ Module DRServer
                         Dim sc = New System.ServiceProcess.ServiceController(srv)
                         sc.Refresh()
                         serviceStatus &= srv & "=" & sc.Status & ";"
+                        services.Add(srv)
                     Catch ex As Exception
                         serviceStatus &= srv & "=notfound" & ";"
                     End Try
@@ -85,7 +91,7 @@ Module DRServer
             Console.WriteLine("Error: " & ex.ToString())
         End Try
 
-        Return serviceStatus
+        Return services
     End Function
     Public Sub insertData()
         Dim query As String = "INSERT IGNORE INTO dr(name, status, ip) VALUES(@Name, @Status, @Ip);"
@@ -111,11 +117,12 @@ Module DRServer
             Console.WriteLine("Error: " & ex.ToString())
         End Try
     End Sub
-    Public Sub setData()
+    Public Sub setData(Optional ByVal isBackBurener As Int16 = 0)
         serviceStatus = String.Empty
         getServices()
 
-        Dim query As String = "UPDATE dr SET status=@Status, cpu=@Cpu, services=@Services, ip=@Ip WHERE name=@Name;"
+        Dim query As String = "UPDATE dr SET status=@Status, cpu=@Cpu, services=@Services, ip=@Ip WHERE name=@Name"
+        If (isBackBurener > 0) Then query = query & ", user=@User"
 
         Dim cmd As New MySqlCommand()
 
@@ -131,6 +138,8 @@ Module DRServer
             cmd.Parameters.AddWithValue("@Cpu", cpuLoad)
             cmd.Parameters.AddWithValue("@Services", serviceStatus)
             cmd.Parameters.AddWithValue("@Ip", GetComputerIP())
+            If (isBackBurener = 1) Then cmd.Parameters.AddWithValue("@User", "BackBurner")
+            If (isBackBurener = 2) Then cmd.Parameters.AddWithValue("@User", "null")
 
             cmd.ExecuteNonQuery()
 
@@ -139,23 +148,50 @@ Module DRServer
             Console.WriteLine("Error: " & ex.ToString())
         End Try
     End Sub
-    Private Function startService(ByVal name As String) As String
-        Try
-            Dim sc = New System.ServiceProcess.ServiceController(name)
-            sc.Refresh()
+    Public Sub stopAllServices()
+        Dim sevices As ArrayList = getServices()
+        sevices.Add(BACKBURNERSRV)
+
+        For Each srv In sevices
+            Dim scs = New System.ServiceProcess.ServiceController(srv)
+            scs.Refresh()
             Try
-                sc.Stop()
-                sc.WaitForStatus(ServiceControllerStatus.Stopped)
+                scs.Stop()
+                scs.WaitForStatus(ServiceControllerStatus.Stopped)
             Catch
             End Try
+        Next
+        ' Kill 3Ds Max
+        For Each prog As Process In Process.GetProcesses
+            If prog.ProcessName = "3dsmax" Then
+                Console.WriteLine(prog.ProcessName)
+                prog.Kill()
+            End If
+        Next
 
+    End Sub
+    Private Function startService(ByVal name As String) As String
+        stopAllServices()
+        Try
+            Dim sc = New System.ServiceProcess.ServiceController(name)
             sc.Start()
+            sc.WaitForStatus(ServiceControllerStatus.Running)
 
+            setData()
             Return name
-            Catch
-                Return "Error"
+        Catch
+            Return "ERROR"
         End Try
 
+    End Function
+    Private Function rebootNode() As String
+        Dim shutdown As New System.Diagnostics.ProcessStartInfo("shutdown.exe")
+
+        shutdown.Arguments = "/f /r /t 000"
+
+        System.Diagnostics.Process.Start(shutdown)
+
+        Return "OK"
     End Function
     Private Function stopService(ByVal name As String) As String
         Try
@@ -163,10 +199,10 @@ Module DRServer
             sc.Refresh()
             sc.Stop()
             sc.WaitForStatus(ServiceControllerStatus.Stopped)
-
-            Return "None"
+            setData()
+            Return "NONE"
         Catch
-            Return "Error"
+            Return "ERROR"
         End Try
 
     End Function
@@ -178,11 +214,9 @@ Module DRServer
 
         Public Sub processMsg(ByVal client As TcpClient, ByVal stream As NetworkStream, ByVal bytesReceived() As Byte)
             ' Handle the message received and 
-            ' send a response back to the client.
-            'mstrMessage = Encoding.ASCII.GetString(bytesReceived, 0, bytesReceived.Length)
+            ' send a response back to the client.            
             mstrMessage = Encoding.UTF8.GetString(bytesReceived.ToArray(), 0, bytesReceived.Length).TrimEnd(Chr(0))
             mscClient = client
-            'mstrMessage = mstrMessage.Substring(0, 3)
 
             mstrResponse = "ERROR"
 
@@ -199,6 +233,10 @@ Module DRServer
                     Console.WriteLine("CHALLANGE")
                     setData()
                     mstrResponse = "OK"
+                Case "REBOOT"
+                    Console.WriteLine("REBOOT")
+                    setData()
+                    mstrResponse = rebootNode()
                 Case "EXIT"
                     Console.WriteLine("EXIT")
                     Environment.Exit(0)
@@ -255,6 +293,7 @@ Module DRServer
 
     End Sub
     WithEvents cpuTimer As New System.Timers.Timer
+    WithEvents busyTimer As New System.Timers.Timer
     Private Sub tick(ByVal sender As Object, ByVal e As System.Timers.ElapsedEventArgs) Handles cpuTimer.Elapsed
         If cpuCount = 1 Then
             cpuLoad = Int(cpuUsage.NextValue().ToString).ToString
@@ -264,10 +303,42 @@ Module DRServer
             cpuCount += 1
         End If
     End Sub
+    Private Sub tickBusy(ByVal sender As Object, ByVal e As System.Timers.ElapsedEventArgs) Handles busyTimer.Elapsed
+        If Int(cpuLoad) < 60 And busyCnt > busyTime Then ' If Free
+
+            For Each s As ServiceController In ServiceController.GetServices()
+                If s.ServiceName = BACKBURNERSRV Then
+                    If s.Status = ServiceControllerStatus.Stopped Then
+                        Console.WriteLine("SET NODE IN FREE")
+                        Console.WriteLine(sep)
+
+                        stopAllServices()
+                        s.Start()
+                    End If
+                End If
+            Next
+            setData(2)
+            busyCnt += 1
+        Else
+            For Each s As ServiceController In ServiceController.GetServices()
+                If s.ServiceName = BACKBURNERSRV Then
+                    If s.Status = ServiceControllerStatus.Running Then
+                        setData(1)
+                    End If
+                End If
+            Next
+
+            busyCnt = 0
+        End If
+    End Sub
     Sub Main()
         cpuTimer.Interval = 1000
         AddHandler cpuTimer.Elapsed, AddressOf tick
         cpuTimer.Start()
+
+        busyTimer.Interval = 60 * 1000 '1 minute
+        AddHandler busyTimer.Elapsed, AddressOf tickBusy
+        busyTimer.Start()
 
         connectDB()
         insertData()

@@ -52,6 +52,30 @@
 		RETURN JSON_ENCODE($JSON);
 	}
 	
+	FUNCTION mysqliGetServices()
+	{
+		$JSON = ARRAY();
+		
+		$MYSQLI = mysqliConnect();
+	
+		IF($MYSQLI->connect_errno) {
+			ECHO '{"message": "ERROR"}';
+			RETURN FALSE;
+		}
+		
+		$QUERY = "SELECT * FROM services;";
+		IF ($RESULT = $MYSQLI->query($QUERY)) {
+			
+			WHILE($ROW = $RESULT->fetch_object()) {
+				$JSON[] = $ROW;							
+			}							
+		}
+			
+		$MYSQLI->CLOSE();		
+		
+		RETURN JSON_ENCODE($JSON);
+	}
+	
 	FUNCTION mysqliGetUser($USER)
 	{
 		$OUT = ARRAY();

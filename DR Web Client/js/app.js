@@ -1,5 +1,20 @@
+/* GLOBAL FUNCTIONS */
+
+Array.prototype.makeUnique = function(){
+   var u = {}, a = [];
+   for(var i = 0, l = this.length; i < l; ++i){
+      if(u.hasOwnProperty(this[i])) {
+         continue;
+      }
+      a.push(this[i]);
+      u[this[i]] = 1;
+   }
+   return a;
+}
+
 /* APP */
-var app = angular.module('app', ['ngRoute', 'ngSanitize', 'ui.bootstrap', 'ngAnimate']);
+
+var app = angular.module('app', ['ngRoute', 'ngSanitize', 'ui.bootstrap']);
 
 
 // CONFIG 
@@ -20,13 +35,15 @@ app.config(function($routeProvider) {
 
 app.controller("homeCtrl", function ($scope, vault, $timeout, $rootScope) {
 	// sendChallange 
-	$scope.sendChallange = function(){
+	$rootScope.firstLoad = 0;
+	
+	$rootScope.sendChallange = function(){
 		vault.sendChallenge();
 		$scope.search = '';
 	}
 	
-	$scope.stopService = function(name){
-		vault.stopService(name);
+	$scope.startService = function(name){
+		vault.startService(name);
 	}
 	
 	$scope.getNodes = function()
@@ -56,6 +73,25 @@ app.controller("homeCtrl", function ($scope, vault, $timeout, $rootScope) {
 		$scope.orderNodes = x;
 	}
 	
+	
+	$scope.runService = function(x){		
+		$rootScope.currentService = 'Spawners';
+		
+		if(x != null && x != '')
+		{
+			$rootScope.currentService = x;
+			vault.startService(x);
+		}
+	}
+	$scope.runService();
+	
+	$scope.rebootNodes = function(){
+		if(confirm('Do you really want to reboot nodes?'))
+		{
+			vault.rebootNodes();
+		}
+	}
+	
 	//	GET RUNNINI SERVICES
 	/*$scope.getUsedServices = function(services){					
 		var serviceInfo = "";
@@ -79,7 +115,19 @@ app.controller("homeCtrl", function ($scope, vault, $timeout, $rootScope) {
 			$rootScope.checkResults.push(key);
 		  }
 		});
-	  });	
+	  });
+
+	  $rootScope.chekSwipe = function(e, ip, disabled) {
+		if(disabled) {return false}
+				
+		if(e.buttons == 1){			
+			$rootScope.checkModel[ip] = !$rootScope.checkModel[ip];
+		}
+		/*if(e.buttons == 2){
+			$rootScope.checkModel[ip] = false;
+		}*/
+	  }
+	  	
 });
 // AUTO RUN
 app.run( function($rootScope, $location, $routeParams, vault) {
@@ -91,23 +139,28 @@ app.run( function($rootScope, $location, $routeParams, vault) {
 		$rootScope.socketResponse = {};
 		$rootScope.showMsg = {};
 		$rootScope.logIn = function(){vault.logIn();}
-		$rootScope.logOut = function(){vault.logOut();}
+		$rootScope.logOut = function(){vault.logOut(m);}
 		
 		vault.logIn();
     });
 });
 // SERVICES
-app.service('vault', function($http, $rootScope, $timeout) {
+app.service('vault', function($http, $rootScope, $timeout, $interval) {
 	// MESSAGES
-	var showMsg = function(r)
+	var showMsg = function(r, p)
 	{
 		$rootScope.showMsg = {};
 		
-		switch(r.message)
+		m = r.message ? r.message : r;
+		switch(m)
 		{
 			case 'ERROR': $rootScope.showMsg.error = 'MySQL connection error :( ...';
 			break;
-			case 'RESTRICTED': $rootScope.showMsg.warn = 'This user restricted!';
+			case 'RESTRICTED':
+			{
+				$rootScope.showMsg.warn = 'This user restricted!';
+				$rootScope.logOut('Your session has been expired!');
+			}
 			break;
 			case 'NODESDROPPED':   
 			{
@@ -133,6 +186,10 @@ app.service('vault', function($http, $rootScope, $timeout) {
 			break;
 			case 'NONODES':  $rootScope.showMsg.warn = 'Please select at leaset one node!';
 			break;
+			case 'REBOOT':  $rootScope.showMsg.warn = 'Nodes will reboot! Update the status in few minutes...';
+			break;
+			break;
+			case 'STARTSERVICE':  $rootScope.showMsg.warn = 'Start ' + p + ' on all reserved nodes! Update the status in few minutes...';
 		}
 	}
 	
@@ -151,14 +208,33 @@ app.service('vault', function($http, $rootScope, $timeout) {
 		return $http.get('vault/' + file + '.php');
 	}
 	
+	//GET SERVICES
+	var getServices = function(){				
+		httpGet('getServices').success(function(r){			
+			$rootScope.services = r;
+		})
+		.error(function(r){
+			$rootScope.services = {};
+		});	
+	}
 	// GET DR
 	var getDR = function()
 	{
 		httpGet('getDR').success(function(r){
 			$rootScope.dr = r;
-			angular.forEach(r, function(value, key){					
-				$rootScope.checkModel[value.ip] = value.user == $rootScope.userInfo.user;								
+			$rootScope.reservedDr = [];
+			
+			angular.forEach(r, function(value, key){
+				$rootScope.checkModel[value.ip] = false;				
+				
+				if(value.user === $rootScope.userInfo.user)
+				{
+					$rootScope.checkModel[value.ip] = true;
+					$rootScope.reservedDr.push(value);
+				}
 			});			
+			if($rootScope.firstLoad == 0){$rootScope.sendChallange()}			
+			getServices();
 		});		 			
 	}
 	
@@ -169,7 +245,8 @@ app.service('vault', function($http, $rootScope, $timeout) {
 		HttpPost('socket', json).then(function(r){
 			$rootScope.socketResponse[ip] =  r.data;
 			
-			getDR();										
+			getDR();
+			$rootScope.firstLoad++;
 		}, 
 		function(r){
 			$rootScope.socketResponse[ip] =  'DISCONNECTED';
@@ -183,14 +260,15 @@ app.service('vault', function($http, $rootScope, $timeout) {
 		for(var i = 0; i < a.length; i++)  
 		{			
 			var ip = a[i].ip;
-			socket(ip, cmd);
+			var user = a[i].user;
+			var userName = $rootScope.userInfo.user;
+			if(user === userName)
+			{
+				socket(ip, cmd);	
+			}			
 		}	
 	}
-	// STOP SERVICE
-	var stopService = function(name)
-	{
-		sendCmd('STOPSERVICE:' + name)	
-	}
+	
 	// SEND CHALLANGE	
 	var sendChallenge = function()
 	{			
@@ -201,7 +279,31 @@ app.service('vault', function($http, $rootScope, $timeout) {
 			var ip = a[i].ip
 			var cmd = "CHALLANGE"
 			socket(ip, cmd);
-		}	
+		}
+	}
+	// START/STOP SERVICE
+	var stopService = function(name)
+	{
+		sendCmd('STOPSERVICE:' + name);		
+	}
+	var startService = function(name)
+	{
+		sendCmd('STARTSERVICE:' + name);
+		showMsg('STARTSERVICE', name);
+	}
+	// REBOOT NODE
+	var rebootNodes = function()
+	{
+		showMsg('REBOOT');
+		sendCmd('REBOOT');
+		
+		var challangeCnt = 0;
+		var timer = $interval( function(){
+			sendChallenge(); 
+			challangeCnt++;
+			
+			if(challangeCnt > 20) $interval.cancel(timer);
+		}, 3000);
 	}
 	// GET USER INFO
 	var logIn = function()
@@ -227,10 +329,11 @@ app.service('vault', function($http, $rootScope, $timeout) {
 		});		 				
 	}
 	
-	var logOut = function()
+	var logOut = function(m)
 	{
 		httpGet('logout').success(function(r){
 			r.msg = 'You are logout!';
+			if(m) {r.msg = m}
 			$rootScope.userInfo = r;			
 		});
 		
@@ -261,10 +364,12 @@ app.service('vault', function($http, $rootScope, $timeout) {
 	sendChallenge: sendChallenge,
 	getDR: getDR,
 	stopService: stopService,
+	startService: startService,
 	logIn: logIn,
 	logOut: logOut,
 	getNodes: getNodes,
-	dropNodes: dropNodes
+	dropNodes: dropNodes,
+	rebootNodes: rebootNodes
   };
 
 
