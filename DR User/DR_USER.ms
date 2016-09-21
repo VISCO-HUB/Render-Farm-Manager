@@ -11,6 +11,7 @@ global _DR_MONITOR
 global _DR_RUN = "DR_UI.ms"
 global _DR_PATH = getFileNamePath (getThisScriptFileName())
 global _DR_INI = _DR_PATH + "settings.ini"
+global _URL = ""
 	
 fn getCurrMaxVer =
 (
@@ -19,6 +20,8 @@ fn getCurrMaxVer =
 	v = (2000 + v) as string
 	return v
 )
+
+fn getUser = sysInfo.username
 
 fn isVray =
 (
@@ -33,28 +36,56 @@ fn distributedOn s =
 	if(isVray() == true) do _Vray.system_distributedRender = s
 )
 
-fn getUserNodes u =
-(
-	url = "http://viscocg.com/dr/vault/userNodes.php?user=" + u
+fn httpGet url =
+(	
 	w = dotNetObject (dotNetClass "System.Net.WebClient")
 	s = dotNetClass "System.IO.StreamReader"
 	o = w.OpenRead url
 	l = dotNetObject s o
 	t = l.ReadToEnd()
 	
-	if(t == "NONODES") do return ""
-	if(t == "ERROR") do return -1
 	return t
+)
+
+fn getUserNodes =
+(
+	url = _URL + "vault/mxs/mxsGetUserNodes.php?user=" + getUser()
+	r = httpGet url
+		
+	if(r == "NONODES") do return ""
+	return r
 )	
+
+fn deleteUser =
+(
+	url = _URL + "vault/mxs/mxsDeleteUserNodes.php?user=" + getUser()
+	r = httpGet url
+)
+
+fn getIniVrayParams p d: "0" t: #boolint =
+(
+	u = getUser()
+
+	s = getINISetting _DR_INI p u
+
+	if(s == undefined or s == "") do return d
+	
+	case t of
+	(
+		#boolint: s = if(s == "true") then "1" else "0"
+	)
+	
+	return s
+)
 
 fn checkNodesVray =
 (
 	udr = #()
 	dr_cfg = (getDir #plugcfg) + @"\vray_dr.cfg"
-	u = sysInfo.username		
+	u = getUser()		
 	
 	v = getCurrMaxVer()	
-	n = getUserNodes u
+	n = getUserNodes()
 		
 	-- Do nothing if error
 	if(n == "ERROR") do return false
@@ -72,10 +103,12 @@ fn checkNodesVray =
 		
 		return false
 	)
-	
+
 	distributedOn true
 		
 	deleteFile dr_cfg
+	
+	spawnersCount = 0
 	
 	f = openFile dr_cfg mode: "wt"
 	
@@ -85,10 +118,35 @@ fn checkNodesVray =
 		if(v != n[2]) do continue
 		
 		format (n[1] + " 1 20204\n") to:f
+		spawnersCount += 1
 	)
+	
+	RestartServersOnRenderEnd = getIniVrayParams "RESTART_SERVERS" d:"0" t:#boolint
+	UseLocalHost = getIniVrayParams "USE_LOCALHOST" d:"1" t:#boolint 
+	TransferMissingAssets = getIniVrayParams "MISSING_ASSET" d:"0" t:#boolint 
+	UseCachedAssets = getIniVrayParams "CACHED_ASSET" d:"0" t:#boolint 
+	CacheLimitType = getIniVrayParams "CACHED_LIMIT_TYPE" d:"0" t:#string 
+	CacheLimitValue = getIniVrayParams "CACHED_LIMIT_VALUE" d:"100.0" t:#string
+	
+	format("restart_slaves " + RestartServersOnRenderEnd + "\n")  to:f
+	format("list_in_scene 0\n")  to:f
+	format("max_servers 0\n")  to:f
+	format("use_local_machine " + UseLocalHost + "\n")  to:f
+	format("transfer_missing_assets " + TransferMissingAssets + "\n")  to:f
+	format("use_cached_assets " + UseCachedAssets + "\n")  to:f
+	format("cache_limit_type " + CacheLimitType + "\n")  to:f
+	format("cache_limit " + CacheLimitValue + "\n")  to:f
 	
 	flush f
 	close f
+	
+	m = "Used nodes " + spawnersCount as string
+	if(spawnersCount == 0) then
+	(
+		m = "Nodes not added! Not found VraySpawner " + v +" on any reserved node!"
+	)
+	
+	pushPrompt ("Render Farm Manager: " + m)
 )
 
 fn checkNodes =
@@ -99,7 +157,9 @@ fn checkNodes =
 rollout _DR_MONITOR ""
 (	
 	on _DR_MONITOR open do
-	(												
+	(	
+		_URL = getINISetting _DR_INI "MAIN" "URL"
+		
 		callbacks.removescripts id:#fwdUserIni1
 		callbacks.addScript #systemPostReset "deleteUser()" id:#fwdUserIni1 persistent:false	
 		
@@ -136,7 +196,7 @@ rollout _DR_MONITOR ""
 		dialogMonitorOps.unregisterNotification id:#closeDrWindow
 		dialogMonitorOps.enabled = true
 		dialogMonitorOps.interactive = false
-		dialogMonitorOps.registerNotification blockDr id:#closeDrWindow
+		dialogMonitorOps.registerNotification blockDr id:#closeDrWindow			
 	)
 		
 	on _DR_MONITOR close do

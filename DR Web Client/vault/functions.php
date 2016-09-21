@@ -26,6 +26,23 @@
 		RETURN $RUNNINGSRV;
 	}
 	
+	FUNCTION isIPExist($IP)
+	{
+		$MYSQLI = mysqliConnect();
+		
+		IF($MYSQLI->connect_errno) {
+			RETURN FALSE;
+		}
+		
+		$QUERY = "SELECT * FROM dr WHERE ip='" . $IP . "';";
+		$RESULT = $MYSQLI->query($QUERY);		
+		$COUNT = MYSQLI_NUM_ROWS($RESULT);
+		
+		$MYSQLI->CLOSE();
+		
+		RETURN $COUNT == 1;	
+	}
+	
 	FUNCTION mysqliGetDR()
 	{
 		$JSON = ARRAY();
@@ -200,4 +217,90 @@
 		ECHO $OUT ;
 	}
 	
+	FUNCTION exeSetData($DATA)
+	{
+		IF(!isIPExist($DATA->ip)) 
+		{			
+			RETURN 'ERROR';
+		}
+		$IP = HTMLSPECIALCHARS($DATA->ip);
+		$NAME = HTMLSPECIALCHARS($DATA->name);	
+		$CPU = HTMLSPECIALCHARS($DATA->cpu);
+		$SERVICE = HTMLSPECIALCHARS($DATA->service);
+		$USER = HTMLSPECIALCHARS($DATA->user);
+		
+		$MYSQLI = mysqliConnect();
+		
+		IF($MYSQLI->connect_errno) {
+			ECHO 'ERROR';
+			RETURN FALSE;
+		}
+		
+		
+		$ATTACH = "";
+		SWITCH ($USER) {
+			CASE 'NO':
+				$ATTACH = "";
+			BREAK;
+			CASE 'CLEAR':
+				$ATTACH = "user=null";
+			BREAK;
+			DEFAULT:
+				$ATTACH = "user='" . $USER . "'";
+			BREAK;
+		}
+		
+		$QUERY = "UPDATE dr SET cpu='" . $CPU . "', services='" . $SERVICE . "', name='" . $NAME . "' " . $ATTACH ." WHERE ip='" . $IP . "'";		
+		$RESULT = $MYSQLI->query($QUERY);		
+
+			
+		$MYSQLI->CLOSE();
+
+		RETURN 'OK';
+	}
+	
+	FUNCTION exeInsertData($DATA)
+	{		
+		$IP = HTMLSPECIALCHARS($DATA->ip);
+		$NAME = HTMLSPECIALCHARS($DATA->name);	
+				
+		$MYSQLI = mysqliConnect();
+		
+		IF($MYSQLI->connect_errno) {
+			ECHO 'ERROR';
+			RETURN FALSE;
+		}
+				
+		$QUERY = "INSERT IGNORE INTO dr(name,ip) VALUES('" . $NAME . "', '" . $IP . "');";		
+		$RESULT = $MYSQLI->query($QUERY);		
+			
+		$MYSQLI->CLOSE();
+
+		RETURN 'OK';
+	}
+	
+	FUNCTION exeGetServices()
+	{		
+		$IP = HTMLSPECIALCHARS($DATA->ip);
+		$NAME = HTMLSPECIALCHARS($DATA->name);	
+				
+		$MYSQLI = mysqliConnect();
+		
+		IF($MYSQLI->connect_errno) {
+			ECHO 'ERROR';
+			RETURN FALSE;
+		}
+		$S = "";	
+		$QUERY = "SELECT * FROM services;";
+		IF ($RESULT = $MYSQLI->query($QUERY)) {
+			
+			WHILE($ROW = $RESULT->fetch_object()) {
+				$S .= $ROW->name . ';';							
+			}							
+		}
+			
+		$MYSQLI->CLOSE();
+
+		RETURN $S;
+	}
 ?>

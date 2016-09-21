@@ -1,15 +1,104 @@
-﻿Imports MySql.Data.MySqlClient
-Imports System.Net
+﻿Imports System.Net
 Imports System.Net.Sockets
 Imports System.Text
 Imports System.Threading
 Imports System.IO
 Imports System.ServiceProcess
 Imports System.Timers
+Public Class clsIni
+    ' API functions
+    Private Declare Ansi Function GetPrivateProfileString _
+  Lib "kernel32.dll" Alias "GetPrivateProfileStringA" _
+  (ByVal lpApplicationName As String,
+  ByVal lpKeyName As String, ByVal lpDefault As String,
+  ByVal lpReturnedString As System.Text.StringBuilder,
+  ByVal nSize As Integer, ByVal lpFileName As String) _
+  As Integer
+    Private Declare Ansi Function WritePrivateProfileString _
+  Lib "kernel32.dll" Alias "WritePrivateProfileStringA" _
+  (ByVal lpApplicationName As String,
+  ByVal lpKeyName As String, ByVal lpString As String,
+  ByVal lpFileName As String) As Integer
+    Private Declare Ansi Function GetPrivateProfileInt _
+  Lib "kernel32.dll" Alias "GetPrivateProfileIntA" _
+  (ByVal lpApplicationName As String,
+  ByVal lpKeyName As String, ByVal nDefault As Integer,
+  ByVal lpFileName As String) As Integer
+    Private Declare Ansi Function FlushPrivateProfileString _
+  Lib "kernel32.dll" Alias "WritePrivateProfileStringA" _
+  (ByVal lpApplicationName As Integer,
+  ByVal lpKeyName As Integer, ByVal lpString As Integer,
+  ByVal lpFileName As String) As Integer
+    Dim strFilename As String
 
+    ' Constructor, accepting a filename
+    Public Sub New(ByVal Filename As String)
+        strFilename = Filename
+    End Sub
+
+    ' Read-only filename property
+    ReadOnly Property FileName() As String
+        Get
+            Return strFilename
+        End Get
+    End Property
+
+    Public Function GetString(ByVal Section As String,
+  ByVal Key As String, ByVal [Default] As String) As String
+        ' Returns a string from your INI file
+        Dim intCharCount As Integer
+        Dim objResult As New System.Text.StringBuilder(256)
+        intCharCount = GetPrivateProfileString(Section, Key, [Default], objResult, objResult.Capacity, strFilename)
+        If intCharCount > 0 Then
+            GetString = Left(objResult.ToString, intCharCount)
+        Else
+            GetString = ""
+        End If
+
+    End Function
+
+    Public Function GetInteger(ByVal Section As String,
+  ByVal Key As String, ByVal [Default] As Integer) As Integer
+        ' Returns an integer from your INI file
+        Return GetPrivateProfileInt(Section, Key,
+       [Default], strFilename)
+    End Function
+
+    Public Function GetBoolean(ByVal Section As String,
+  ByVal Key As String, ByVal [Default] As Boolean) As Boolean
+        ' Returns a boolean from your INI file
+        Return (GetPrivateProfileInt(Section, Key,
+       CInt([Default]), strFilename) = 1)
+    End Function
+
+    Public Sub WriteString(ByVal Section As String,
+  ByVal Key As String, ByVal Value As String)
+        ' Writes a string to your INI file
+        WritePrivateProfileString(Section, Key, Value, strFilename)
+        Flush()
+    End Sub
+
+    Public Sub WriteInteger(ByVal Section As String,
+  ByVal Key As String, ByVal Value As Integer)
+        ' Writes an integer to your INI file
+        WriteString(Section, Key, CStr(Value))
+        Flush()
+    End Sub
+
+    Public Sub WriteBoolean(ByVal Section As String,
+  ByVal Key As String, ByVal Value As Boolean)
+        ' Writes a boolean to your INI file
+        WriteString(Section, Key, CStr(CInt(Value)))
+        Flush()
+    End Sub
+
+    Private Sub Flush()
+        ' Stores all the cached changes to your INI file
+        FlushPrivateProfileString(0, 0, 0, strFilename)
+    End Sub
+End Class
 Module DRServer
 
-    Dim conn As New MySqlConnection
     Const port As Integer = 55001
     Dim busyTime = 60 'min
     Dim output As String = String.Empty
@@ -18,7 +107,9 @@ Module DRServer
     Dim cpuLoad As String = 0
     Dim cpuCount As Int16 = 0
     Dim busyCnt As Int16 = 0
-    Dim BACKBURNERSRV As String = "BACKBURNER_SRV_200"
+    Dim BACKBURNERSRV As String = ""
+    Dim objIniFile As New clsIni(System.AppDomain.CurrentDomain.BaseDirectory + "\settings.ini")
+    Dim URL As String = String.Empty
 
     Dim cpuUsage = New PerformanceCounter("Processor", "% Processor Time", "_Total")
     Private Function sendWebRequest(url As String, Data As String)
@@ -36,15 +127,22 @@ Module DRServer
 
         dataStream.Write(byteData, 0, byteData.Length)
         dataStream.Close()
+        Dim responseFromServer As String = "OK"
+        Try
+            Dim response As WebResponse = request.GetResponse()
+            dataStream = response.GetResponseStream()
+            Dim reader As New StreamReader(dataStream)
+            responseFromServer = reader.ReadToEnd()
+            If (responseFromServer.Count = 0) Then
+                responseFromServer = "ERROR"
+            End If
+            reader.Close()
+            response.Close()
+        Catch
+            responseFromServer = "ERROR"
+        End Try
 
-        Dim response As WebResponse = request.GetResponse()
-        dataStream = response.GetResponseStream()
-        Dim reader As New StreamReader(dataStream)
-        Dim responseFromServer As String = reader.ReadToEnd()
-        Console.WriteLine(responseFromServer)
-        reader.Close()
         dataStream.Close()
-        response.Close()
 
         Return responseFromServer
     End Function
@@ -66,115 +164,45 @@ Module DRServer
 
         Return GetIPv4Address
     End Function
-    Public Sub connectDB()
-        Dim DatabaseName As String = "dr_manager"
-        Dim server As String = "svg-web-002"
-        Dim userName As String = "dr_manager"
-        Dim password As String = "!Genius!"
-        If Not conn Is Nothing Then conn.Close()
-
-        conn.ConnectionString = String.Format("server={0}; user id={1}; password={2}; database={3}; pooling=false", server, userName, password, DatabaseName)
-
-        Dim cmd As New MySqlCommand
-
-        Try
-            conn.Open()
-        Catch ex As Exception
-            MsgBox(ex.Message)
-        End Try
-
-        'conn.Close()
-    End Sub
     Private Function getServices() As ArrayList
-        Dim query As String = "SELECT * FROM services"
-        Dim cmd As New MySqlCommand()
         Dim services As New ArrayList
+        Dim Resp As String = ""
+        Resp = sendWebRequest(URL & "exeGetServices.php", "{""get"":""services""}")
+        If (Resp = "ERROR") Then
+            Return services
+        End If
 
-        Try
-            'conn.Open()
-            cmd.Connection = conn
-
-            cmd.CommandText = query
-
-            Dim reader As MySqlDataReader = cmd.ExecuteReader()
-
-            While reader.Read()
-                Dim srv As String = reader.GetString(1)
-                If srv IsNot Nothing Then
-                    Try
-                        Dim sc = New System.ServiceProcess.ServiceController(srv)
-                        sc.Refresh()
-                        serviceStatus &= srv & "=" & sc.Status & ";"
-                        services.Add(srv)
-                    Catch ex As Exception
-                        serviceStatus &= srv & "=notfound" & ";"
-                    End Try
-                End If
-            End While
-
-            reader.Close()
-            'conn.Close()
-        Catch ex As MySqlException
-            Console.WriteLine("Error: " & ex.ToString())
-        End Try
+        Dim s As String() = Resp.Split(New Char() {";"c})
+        For Each i In s
+            Try
+                Dim sc = New System.ServiceProcess.ServiceController(i)
+                sc.Refresh()
+                serviceStatus &= i & "=" & sc.Status & ";"
+                services.Add(i)
+            Catch ex As Exception
+                serviceStatus &= i & "=notfound" & ";"
+            End Try
+        Next
 
         Return services
     End Function
-    Public Sub insertData()
-        Dim query As String = "INSERT IGNORE INTO dr(name, status, ip) VALUES(@Name, @Status, @Ip);"
+    Public Function insertData()
+        Dim Data As String = "{""ip"":""" & GetComputerIP() & """, ""name"":""" & GetComputerName() & """}"
 
-        Dim cmd As New MySqlCommand()
-
-        Try
-            'conn.Open()
-            cmd.Connection = conn
-
-            cmd.CommandText = query
-            cmd.Prepare()
-
-            cmd.Parameters.AddWithValue("@Name", GetComputerName())
-            cmd.Parameters.AddWithValue("@Status", "0")
-            cmd.Parameters.AddWithValue("@Ip", GetComputerIP())
-
-            cmd.ExecuteNonQuery()
-
-            'conn.Close()
-
-        Catch ex As MySqlException
-            Console.WriteLine("Error: " & ex.ToString())
-        End Try
-    End Sub
-    Public Sub setData(Optional ByVal isBackBurener As Int16 = 0)
+        Return sendWebRequest(URL & "exeInsertData.php", Data)
+    End Function
+    Public Function setData(Optional ByVal isBackBurener As Int16 = 0)
         serviceStatus = String.Empty
         getServices()
+        Dim user As String = "NO"
 
-        Dim query As String = "UPDATE dr SET status=@Status, cpu=@Cpu, services=@Services, ip=@Ip WHERE name=@Name"
-        If (isBackBurener > 0) Then query = query & ", user=@User"
+        If (isBackBurener = 1) Then user = "BackBurner"
+        If (isBackBurener = 2) Then user = "CLEAR"
 
-        Dim cmd As New MySqlCommand()
+        Dim Data As String = "{""ip"":""" & GetComputerIP() & """, ""name"":""" & GetComputerName() & """, ""cpu"":""" & cpuLoad & """, ""service"":""" & serviceStatus & """, ""user"":""" & user & """}"
 
-        Try
-            ' conn.Open()
-            cmd.Connection = conn
-
-            cmd.CommandText = query
-            cmd.Prepare()
-
-            cmd.Parameters.AddWithValue("@Name", GetComputerName())
-            cmd.Parameters.AddWithValue("@Status", "0")
-            cmd.Parameters.AddWithValue("@Cpu", cpuLoad)
-            cmd.Parameters.AddWithValue("@Services", serviceStatus)
-            cmd.Parameters.AddWithValue("@Ip", GetComputerIP())
-            If (isBackBurener = 1) Then cmd.Parameters.AddWithValue("@User", "BackBurner")
-            If (isBackBurener = 2) Then cmd.Parameters.AddWithValue("@User", "null")
-
-            cmd.ExecuteNonQuery()
-
-            'conn.Close()
-        Catch ex As MySqlException
-            Console.WriteLine("Error: " & ex.ToString())
-        End Try
-    End Sub
+        Return sendWebRequest(URL & "exeSetData.php", Data)
+    End Function
     Public Sub stopAllServices()
         Dim sevices As ArrayList = getServices()
         sevices.Add(BACKBURNERSRV)
@@ -244,7 +272,7 @@ Module DRServer
             ' send a response back to the client.            
             mstrMessage = Encoding.UTF8.GetString(bytesReceived.ToArray(), 0, bytesReceived.Length).TrimEnd(Chr(0))
             mscClient = client
-
+            Dim Data As String = setData()
             mstrResponse = "ERROR"
 
             Dim cmds As String() = mstrMessage.Split(New Char() {":"c})
@@ -258,17 +286,14 @@ Module DRServer
                     mstrResponse = stopService(cmds(1))
                 Case "CHALLANGE"
                     Console.WriteLine("CHALLANGE")
-
-                    sendWebRequest("http://viscocg.com/dr/vault/test.php", "{""msg"":""HELLOW WORLD""}")
-                    setData()
-                    mstrResponse = "OK"
+                    mstrResponse = setData()
                 Case "REBOOT"
                     Console.WriteLine("REBOOT")
                     setData()
                     mstrResponse = rebootNode()
                 Case "DROPNODE"
                     Console.WriteLine("DROPNODE")
-                    setData()
+
                     mstrResponse = rebootNode()
                 Case "EXIT"
                     Console.WriteLine("EXIT")
@@ -336,35 +361,49 @@ Module DRServer
             cpuCount += 1
         End If
     End Sub
+    Private Sub startBackBurner()
+        For Each s As ServiceController In ServiceController.GetServices()
+            If s.ServiceName = BACKBURNERSRV Then
+                If s.Status = ServiceControllerStatus.Stopped Then
+                    Console.WriteLine("SET NODE IN FREE")
+                    Console.WriteLine(sep)
+
+                    stopAllServices()
+                    s.Start()
+                End If
+            End If
+        Next
+        setData(2)
+        busyCnt += 1
+    End Sub
+    Private Sub setNodeBusy()
+        For Each s As ServiceController In ServiceController.GetServices()
+            If s.ServiceName = BACKBURNERSRV Then
+                If s.Status = ServiceControllerStatus.Running Then
+                    setData(1)
+                End If
+            End If
+        Next
+
+        busyCnt = 0
+    End Sub
     Private Sub tickBusy(ByVal sender As Object, ByVal e As System.Timers.ElapsedEventArgs) Handles busyTimer.Elapsed
+        busyTime = Int(objIniFile.GetString("MAIN", "BUSYTIME", ""))
+
         If Int(cpuLoad) < 60 And busyCnt > busyTime Then ' If Free
-
-            For Each s As ServiceController In ServiceController.GetServices()
-                If s.ServiceName = BACKBURNERSRV Then
-                    If s.Status = ServiceControllerStatus.Stopped Then
-                        Console.WriteLine("SET NODE IN FREE")
-                        Console.WriteLine(sep)
-
-                        stopAllServices()
-                        s.Start()
-                    End If
-                End If
-            Next
-            setData(2)
-            busyCnt += 1
+            startBackBurner()
         Else
-            For Each s As ServiceController In ServiceController.GetServices()
-                If s.ServiceName = BACKBURNERSRV Then
-                    If s.Status = ServiceControllerStatus.Running Then
-                        setData(1)
-                    End If
-                End If
-            Next
-
-            busyCnt = 0
+            setNodeBusy()
         End If
     End Sub
     Sub Main()
+        ' SETTINGS
+        URL = objIniFile.GetString("MAIN", "URL", "")
+        URL = URL & "vault/exe/"
+        BACKBURNERSRV = objIniFile.GetString("MAIN", "BACKBURNER", "")
+        busyTime = Int(objIniFile.GetString("MAIN", "BUSYTIME", ""))
+
+        ' TIMERS
         cpuTimer.Interval = 1000
         AddHandler cpuTimer.Elapsed, AddressOf tick
         cpuTimer.Start()
@@ -373,11 +412,18 @@ Module DRServer
         AddHandler busyTimer.Elapsed, AddressOf tickBusy
         busyTimer.Start()
 
-        connectDB()
+        ' SET FIRST INFO
         insertData()
-        Console.WriteLine("DR SERVER")
+
+        ' CONSOLE LOG
+        Console.WriteLine("START NODE SERVER")
+        Console.WriteLine("")
+        Console.WriteLine("SET REMOTE URL: " & URL)
+        Console.WriteLine("SET BACKBURNER SERVICE: " & BACKBURNERSRV)
+        Console.WriteLine("SET BUSYTIME: " & busyTime & " MIN")
         Console.WriteLine("")
 
+        ' SOCKET LISTENER
         createListener()
     End Sub
 End Module
