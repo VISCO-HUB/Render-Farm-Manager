@@ -171,4 +171,33 @@
 		ECHO '{"message": "NODESDROPPED"}' ;
 	}
 	
+	FUNCTION mysqliUserNodes($USER)
+	{
+		$MYSQLI = mysqliConnect();
+		
+		IF($MYSQLI->connect_errno) {
+			ECHO "ERROR";
+			RETURN FALSE;
+		}
+		
+		$OUT = "";		
+		$QUERY = "SELECT * FROM dr WHERE user='" . $USER . "';";
+		IF ($RESULT = $MYSQLI->query($QUERY)) {
+			
+			WHILE($ROW = $RESULT->fetch_object()) {
+				
+				$S = getSrv($ROW->services);
+				$S = PREG_REPLACE('/[a-z\s+]/i', '', $S);
+				
+				$OUT .= $ROW->ip . '-' . $S . ';';							
+			}
+
+			IF(EMPTY($OUT)) $OUT = 'NONODES';
+		}
+						
+		$MYSQLI->CLOSE();
+		
+		ECHO $OUT ;
+	}
+	
 ?>

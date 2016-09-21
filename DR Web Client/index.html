@@ -4,6 +4,9 @@
 <head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<meta http-equiv="Pragma" content="no-cache">
+	<meta http-equiv="Cache-Control" content="no-cache">
+	<meta http-equiv="Expires" content="Sat, 01 Dec 2001 00:00:00 GMT">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<link rel="icon" href="img/favicon.ico" type="image/x-icon">
     <title>Render Farm Manager</title>
@@ -66,7 +69,7 @@
 	
            <div ng-view ng-show="userInfo.logged" ng-class="flip"></div>        
         </div>
-    </div>
+<div ng-show="firstLoad < 1" class="loading"><div class="loading-img"></div></div>
 </body>
 
 </html>

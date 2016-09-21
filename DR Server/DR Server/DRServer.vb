@@ -6,11 +6,12 @@ Imports System.Threading
 Imports System.IO
 Imports System.ServiceProcess
 Imports System.Timers
+
 Module DRServer
 
     Dim conn As New MySqlConnection
     Const port As Integer = 55001
-    Dim busyTime = 2 '2 hrs
+    Dim busyTime = 60 'min
     Dim output As String = String.Empty
     Dim serviceStatus As String
     Dim sep As String = "------------------------------------------------------"
@@ -20,7 +21,33 @@ Module DRServer
     Dim BACKBURNERSRV As String = "BACKBURNER_SRV_200"
 
     Dim cpuUsage = New PerformanceCounter("Processor", "% Processor Time", "_Total")
+    Private Function sendWebRequest(url As String, Data As String)
+        Dim request As HttpWebRequest = DirectCast(WebRequest.Create(url), HttpWebRequest)
 
+        request.Method = "POST"
+        request.KeepAlive = True
+
+        Dim byteData As Byte() = Encoding.UTF8.GetBytes(Data)
+        request.ContentType = "application/json"
+
+        request.ContentLength = byteData.Length
+
+        Dim dataStream As Stream = request.GetRequestStream()
+
+        dataStream.Write(byteData, 0, byteData.Length)
+        dataStream.Close()
+
+        Dim response As WebResponse = request.GetResponse()
+        dataStream = response.GetResponseStream()
+        Dim reader As New StreamReader(dataStream)
+        Dim responseFromServer As String = reader.ReadToEnd()
+        Console.WriteLine(responseFromServer)
+        reader.Close()
+        dataStream.Close()
+        response.Close()
+
+        Return responseFromServer
+    End Function
     Public Function GetComputerName() As String
         Dim ComputerName As String
         ComputerName = System.Net.Dns.GetHostName
@@ -231,10 +258,16 @@ Module DRServer
                     mstrResponse = stopService(cmds(1))
                 Case "CHALLANGE"
                     Console.WriteLine("CHALLANGE")
+
+                    sendWebRequest("http://viscocg.com/dr/vault/test.php", "{""msg"":""HELLOW WORLD""}")
                     setData()
                     mstrResponse = "OK"
                 Case "REBOOT"
                     Console.WriteLine("REBOOT")
+                    setData()
+                    mstrResponse = rebootNode()
+                Case "DROPNODE"
+                    Console.WriteLine("DROPNODE")
                     setData()
                     mstrResponse = rebootNode()
                 Case "EXIT"

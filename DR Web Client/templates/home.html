@@ -1,4 +1,4 @@
-<div ng-show="firstLoad > 1">
+<div ng-show="firstLoad > 0">
 <div ng-show="showMsg.warn || showMsg.error || showMsg.success" class="alert alert-dismissible fade in" role="alert" ng-class="{'alert-warning': showMsg.warn, 'alert-success': showMsg.success, 'alert-danger': showMsg.error}">
 			<button type="button" class="close"  aria-label="Close" ng-click="deleteMsg()"><span aria-hidden="true">&times;</span></button>
 			
@@ -49,7 +49,7 @@
 </div>
 </div>
 </div>
-<div ng-show="firstLoad <= 1" class="loading"><div class="loading-img"></div><div>
+
 
 
 

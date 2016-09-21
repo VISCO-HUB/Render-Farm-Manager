@@ -1,3 +1,22 @@
+/*
+	In Project Used:
+
+	JavaScript
+	JQuery
+	Angular
+	Angular UI
+	BootStrap
+	HTML
+	CSS
+	MySQL
+	Sockets
+	PHP
+	Vb Net
+	Dot Net
+	MaxScript
+
+*/
+
 /* GLOBAL FUNCTIONS */
 
 Array.prototype.makeUnique = function(){
@@ -62,7 +81,7 @@ app.controller("homeCtrl", function ($scope, vault, $timeout, $rootScope) {
 	
 	$scope.isReserved = function(user)
 	{
-		return user != $rootScope.userInfo.user && user != null;
+		return user != null && $rootScope.userInfo && user != $rootScope.userInfo.user;
 	}
 	
 	//$scope.orderNodes = 'name';
@@ -139,7 +158,7 @@ app.run( function($rootScope, $location, $routeParams, vault) {
 		$rootScope.socketResponse = {};
 		$rootScope.showMsg = {};
 		$rootScope.logIn = function(){vault.logIn();}
-		$rootScope.logOut = function(){vault.logOut(m);}
+		$rootScope.logOut = function(m){vault.logOut(m);}
 		
 		vault.logIn();
     });
@@ -187,9 +206,9 @@ app.service('vault', function($http, $rootScope, $timeout, $interval) {
 			case 'NONODES':  $rootScope.showMsg.warn = 'Please select at leaset one node!';
 			break;
 			case 'REBOOT':  $rootScope.showMsg.warn = 'Nodes will reboot! Update the status in few minutes...';
-			break;
-			break;
+			break;			
 			case 'STARTSERVICE':  $rootScope.showMsg.warn = 'Start ' + p + ' on all reserved nodes! Update the status in few minutes...';
+			break;
 		}
 	}
 	
@@ -197,7 +216,7 @@ app.service('vault', function($http, $rootScope, $timeout, $interval) {
 	var HttpPost = function(file, json)
 	{		
 		return $http({
-			url: 'vault/' + file + '.php',
+			url: 'vault/' + file + '.php?time=' + new Date().getTime(),
 			method: "POST",
 			data: json
 		});
@@ -205,7 +224,7 @@ app.service('vault', function($http, $rootScope, $timeout, $interval) {
 	
 	var httpGet = function(file)
 	{		
-		return $http.get('vault/' + file + '.php');
+		return $http.get('vault/' + file + '.php?time=' + new Date().getTime());
 	}
 	
 	//GET SERVICES
@@ -227,7 +246,7 @@ app.service('vault', function($http, $rootScope, $timeout, $interval) {
 			angular.forEach(r, function(value, key){
 				$rootScope.checkModel[value.ip] = false;				
 				
-				if(value.user === $rootScope.userInfo.user)
+				if($rootScope.userInfo && value.user === $rootScope.userInfo.user)
 				{
 					$rootScope.checkModel[value.ip] = true;
 					$rootScope.reservedDr.push(value);
@@ -261,8 +280,7 @@ app.service('vault', function($http, $rootScope, $timeout, $interval) {
 		{			
 			var ip = a[i].ip;
 			var user = a[i].user;
-			var userName = $rootScope.userInfo.user;
-			if(user === userName)
+			if($rootScope.userInfo && user === $rootScope.userInfo.user)
 			{
 				socket(ip, cmd);	
 			}			
@@ -352,10 +370,10 @@ app.service('vault', function($http, $rootScope, $timeout, $interval) {
 	}
 	
 	var dropNodes = function()
-	{	
+	{			
 		httpGet('dropNodes').success(function(r){
 			showMsg(r);
-			getDR();			
+			getDR();
 		});	
 	}
 		

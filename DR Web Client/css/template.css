@@ -97,8 +97,9 @@ tr.reserved td, tr.reserved td a{
 .loading-img {
 	background-repeat: no-repeat;
     background-position: 50% 50%;
-    background-image: url('../img/load.png');
-    animation: rotate .7s linear infinite;
+	background-size: cover;
+    background-image: url('../img/loading.svg');
+    animation: rotate 0.7s linear infinite;
     width: 100%;
     height: 100%;	
 }
@@ -111,4 +112,8 @@ tr.reserved td, tr.reserved td a{
 	100% {
 		transform: rotate(360deg);
 	}
+}
+
+.progress-bar{
+	transition: none !important;
 }

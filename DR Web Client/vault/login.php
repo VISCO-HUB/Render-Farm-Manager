@@ -1,11 +1,11 @@
 <?php	
 	ini_set('error_reporting', E_ALL);
 	error_reporting(E_ALL);
-	ini_set('session.cookie_lifetime', 9999999999);
-	ini_set('session.gc_maxlifetime', 9999999999);
 	
 	INCLUDE_ONCE 'config.php';
 	INCLUDE_ONCE 'functions.php';
+
+	session_set_cookie_params(9999999999999);
 
 	$JSON = ARRAY();	
 	SESSION_START();
