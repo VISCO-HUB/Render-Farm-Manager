@@ -18,4 +18,9 @@
 		'o.labintsev',
 		'e.astafiev'		
 	];
+	
+	$SUPER_USERS = [
+		'v.lukyanenko',
+		'e.astafiev'
+	];
 ?>

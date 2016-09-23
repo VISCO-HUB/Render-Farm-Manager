@@ -12,6 +12,7 @@ global _DR_RUN = "DR_UI.ms"
 global _DR_PATH = getFileNamePath (getThisScriptFileName())
 global _DR_INI = _DR_PATH + "settings.ini"
 global _URL = ""
+global _CHK = 0
 	
 fn getCurrMaxVer =
 (
@@ -58,7 +59,7 @@ fn getUserNodes =
 
 fn deleteUser =
 (
-	url = _URL + "vault/mxs/mxsDeleteUserNodes.php?user=" + getUser()
+	url = _URL + "vault/mxs/mxsDropUserNodes.php?user=" + getUser()
 	r = httpGet url
 )
 
@@ -87,10 +88,8 @@ fn checkNodesVray =
 	v = getCurrMaxVer()	
 	n = getUserNodes()
 		
-	-- Do nothing if error
-	if(n == "ERROR") do return false
 	-- Clear config
-	if(n == "NONODES") do 
+	if(n == "NONODES" or n == "ERROR") do 
 	(		
 		distributedOn false
 		
@@ -151,11 +150,14 @@ fn checkNodesVray =
 
 fn checkNodes =
 (
-	if(isVray()) do checkNodesVray()
+	if(isVray()) do 
+	(	
+		checkNodesVray()
+	)		
 )
 
 rollout _DR_MONITOR ""
-(	
+(
 	on _DR_MONITOR open do
 	(	
 		_URL = getINISetting _DR_INI "MAIN" "URL"
@@ -170,9 +172,8 @@ rollout _DR_MONITOR ""
 		callbacks.addScript #preSystemShutdown "deleteUser()" id:#fwdUserIni3 persistent:false	
 		
 		callbacks.removescripts id:#fwdPreRender
-		callbacks.addScript #preRender "checkNodes()" id:#fwdPreRender persistent:false	
-
-				
+		callbacks.addScript #preRender "checkNodes()" id:#fwdPreRender persistent:false
+						
 		SetDialogPos _DR_MONITOR [-1000,0]
 						
 		fn blockDr =
@@ -204,11 +205,11 @@ rollout _DR_MONITOR ""
 		dialogMonitorOps.unregisterNotification id:#closeDrWindow
 		dialogMonitorOps.enabled = false
 		
-		/*callbacks.removescripts id:#fwdUserIni1
+		callbacks.removescripts id:#fwdUserIni1
 		callbacks.removescripts id:#fwdUserIni2
-		callbacks.removescripts id:#fwdUserIni3*/
+		callbacks.removescripts id:#fwdUserIni3
 		callbacks.removescripts id:#fwdPreRender
-	)
+	)	
 )
 
 createDialog _DR_MONITOR 0 0 style: #()

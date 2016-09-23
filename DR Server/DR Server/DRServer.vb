@@ -146,6 +146,15 @@ Module DRServer
 
         Return responseFromServer
     End Function
+    Private Function sendWebGetReques(url As String)
+        Dim resp As String = "ERROR"
+        Try
+            resp = New System.Net.WebClient().DownloadString(url)
+        Catch
+        End Try
+
+        Return resp
+    End Function
     Public Function GetComputerName() As String
         Dim ComputerName As String
         ComputerName = System.Net.Dns.GetHostName
@@ -167,7 +176,8 @@ Module DRServer
     Private Function getServices() As ArrayList
         Dim services As New ArrayList
         Dim Resp As String = ""
-        Resp = sendWebRequest(URL & "exeGetServices.php", "{""get"":""services""}")
+        Resp = sendWebGetReques(URL & "exeGetServices.php")
+
         If (Resp = "ERROR") Then
             Return services
         End If
@@ -183,15 +193,14 @@ Module DRServer
                 serviceStatus &= i & "=notfound" & ";"
             End Try
         Next
-
         Return services
     End Function
     Public Function insertData()
-        Dim Data As String = "{""ip"":""" & GetComputerIP() & """, ""name"":""" & GetComputerName() & """}"
-
-        Return sendWebRequest(URL & "exeInsertData.php", Data)
+        Dim getString As String = "ip=" & GetComputerIP() & "&name=" & GetComputerName()
+        Return sendWebGetReques(URL & "exeInsertData1.php?" & getString)
     End Function
     Public Function setData(Optional ByVal isBackBurener As Int16 = 0)
+
         serviceStatus = String.Empty
         getServices()
         Dim user As String = "NO"
@@ -199,45 +208,71 @@ Module DRServer
         If (isBackBurener = 1) Then user = "BackBurner"
         If (isBackBurener = 2) Then user = "CLEAR"
 
-        Dim Data As String = "{""ip"":""" & GetComputerIP() & """, ""name"":""" & GetComputerName() & """, ""cpu"":""" & cpuLoad & """, ""service"":""" & serviceStatus & """, ""user"":""" & user & """}"
+        'Dim Data As String = "{""ip"":""" & GetComputerIP() & """, ""name"":""" & GetComputerName() & """, ""cpu"":""" & cpuLoad & """, ""service"":""" & serviceStatus & """, ""user"":""" & user & """}"
+        Dim getString As String = "ip=" & GetComputerIP() & "&name=" & GetComputerName() & "&cpu=" & cpuLoad & "&service=""" & serviceStatus & """" & "&user=" & user
 
-        Return sendWebRequest(URL & "exeSetData.php", Data)
+        Return sendWebGetReques(URL & "exeSetData1.php?" & getString)
+        'Return sendWebRequest(URL & "exeSetData.php", Data)
     End Function
     Public Sub stopAllServices()
         Dim sevices As ArrayList = getServices()
+
         sevices.Add(BACKBURNERSRV)
 
+        'For Each srv In sevices
+
+        '    Dim scs = New System.ServiceProcess.ServiceController(srv)
+        '    scs.Refresh()
+        '    Try
+        '        scs.Stop()
+        '        scs.WaitForStatus(ServiceControllerStatus.Stopped)
+        '    Catch
+        '    End Try
+        'Next
         For Each srv In sevices
-            Dim scs = New System.ServiceProcess.ServiceController(srv)
-            scs.Refresh()
-            Try
-                scs.Stop()
-                scs.WaitForStatus(ServiceControllerStatus.Stopped)
-            Catch
-            End Try
+            For Each s As ServiceController In ServiceController.GetServices()
+                If s.ServiceName = srv Then
+                    If s.Status = ServiceControllerStatus.Running Then
+                        s.Stop()
+                    End If
+                End If
+            Next
         Next
+
         ' Kill 3Ds Max
         For Each prog As Process In Process.GetProcesses
             If prog.ProcessName = "3dsmax" Then
-                Console.WriteLine(prog.ProcessName)
-                prog.Kill()
+                Try
+                    prog.Kill()
+                Catch
+                End Try
             End If
         Next
 
     End Sub
     Private Function startService(ByVal name As String) As String
         stopAllServices()
-        Try
-            Dim sc = New System.ServiceProcess.ServiceController(name)
-            sc.Start()
-            sc.WaitForStatus(ServiceControllerStatus.Running)
+        'Try
+        '    Dim sc = New System.ServiceProcess.ServiceController(name)
+        '    sc.Start()
+        '    sc.WaitForStatus(ServiceControllerStatus.Running)
 
-            setData()
-            Return name
-        Catch
-            Return "ERROR"
-        End Try
+        '    setData()
+        '    Return name
+        'Catch
+        '    Return "ERROR"
+        'End Try
+        'Return "ERROR"
 
+        For Each s As ServiceController In ServiceController.GetServices()
+            If s.ServiceName = name Then
+                If s.Status = ServiceControllerStatus.Stopped Then
+                    s.Start()
+                    Return name
+                End If
+            End If
+        Next
+        Return "ERROR"
     End Function
     Private Function rebootNode() As String
         Dim shutdown As New System.Diagnostics.ProcessStartInfo("shutdown.exe")
@@ -247,6 +282,10 @@ Module DRServer
         System.Diagnostics.Process.Start(shutdown)
 
         Return "OK"
+    End Function
+    Private Function dropNode() As String
+        stopAllServices()
+        Return startService(BACKBURNERSRV)
     End Function
     Private Function stopService(ByVal name As String) As String
         Try
@@ -272,7 +311,7 @@ Module DRServer
             ' send a response back to the client.            
             mstrMessage = Encoding.UTF8.GetString(bytesReceived.ToArray(), 0, bytesReceived.Length).TrimEnd(Chr(0))
             mscClient = client
-            Dim Data As String = setData()
+            'Dim Data As String = setData()
             mstrResponse = "ERROR"
 
             Dim cmds As String() = mstrMessage.Split(New Char() {":"c})
@@ -287,13 +326,13 @@ Module DRServer
                 Case "CHALLANGE"
                     Console.WriteLine("CHALLANGE")
                     mstrResponse = setData()
+                Case "DROP"
+                    mstrResponse = dropNode()
+                    setData()
+                    Console.WriteLine("DROPNODE")
                 Case "REBOOT"
                     Console.WriteLine("REBOOT")
                     setData()
-                    mstrResponse = rebootNode()
-                Case "DROPNODE"
-                    Console.WriteLine("DROPNODE")
-
                     mstrResponse = rebootNode()
                 Case "EXIT"
                     Console.WriteLine("EXIT")
@@ -374,7 +413,6 @@ Module DRServer
             End If
         Next
         setData(2)
-        busyCnt += 1
     End Sub
     Private Sub setNodeBusy()
         For Each s As ServiceController In ServiceController.GetServices()
@@ -384,16 +422,20 @@ Module DRServer
                 End If
             End If
         Next
-
-        busyCnt = 0
     End Sub
     Private Sub tickBusy(ByVal sender As Object, ByVal e As System.Timers.ElapsedEventArgs) Handles busyTimer.Elapsed
         busyTime = Int(objIniFile.GetString("MAIN", "BUSYTIME", ""))
 
-        If Int(cpuLoad) < 60 And busyCnt > busyTime Then ' If Free
-            startBackBurner()
+        If Int(cpuLoad) < 60 Then ' If Free
+
+            If busyCnt >= busyTime Then
+                startBackBurner()
+            End If
+
+            busyCnt += 1
         Else
             setNodeBusy()
+            busyCnt = 0
         End If
     End Sub
     Sub Main()

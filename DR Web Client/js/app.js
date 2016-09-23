@@ -17,6 +17,17 @@
 
 */
 
+/*
+	TODO:
+	
+	Админка:
+	Добавление, удаление сервисов
+	Управление пользователями в системе
+	Создание глобального статуса - вкл./выкл. сервис
+	Перезагрузска всех нод
+	Выключение сервисов на всех нодах
+*/
+
 /* GLOBAL FUNCTIONS */
 
 Array.prototype.makeUnique = function(){
@@ -46,12 +57,24 @@ app.config(function($routeProvider) {
     .when("/admin", {
         templateUrl : "templates/admin.html",
 		controller: 'adminCtrl'
-    })   
+    })  
+	.when("/about", {
+        templateUrl : "templates/about.html",
+		controller: 'aboutCtrl'
+    }) 	
 	.otherwise({redirectTo:'/'});
 });
 
 // CONTROLLERS
-
+	// ABOUT
+app.controller("aboutCtrl", function($scope){
+	
+});
+	// ADMIN
+app.controller("adminCtrl", function($scope){
+	
+});
+	// HOME
 app.controller("homeCtrl", function ($scope, vault, $timeout, $rootScope) {
 	// sendChallange 
 	$rootScope.firstLoad = 0;
@@ -59,6 +82,7 @@ app.controller("homeCtrl", function ($scope, vault, $timeout, $rootScope) {
 	$rootScope.sendChallange = function(){
 		vault.sendChallenge();
 		$scope.search = '';
+		$rootScope.showMsg = {}
 	}
 	
 	$scope.startService = function(name){
@@ -69,6 +93,7 @@ app.controller("homeCtrl", function ($scope, vault, $timeout, $rootScope) {
 	{
 		vault.getNodes();
 	}
+		
 	$scope.deleteMsg = function()
 	{
 		$rootScope.showMsg = {};
@@ -145,8 +170,13 @@ app.controller("homeCtrl", function ($scope, vault, $timeout, $rootScope) {
 		/*if(e.buttons == 2){
 			$rootScope.checkModel[ip] = false;
 		}*/
-	  }
-	  	
+	  }	
+
+	$scope.adminMenu = {
+		content: {},
+		templateUrl: 'adminMenu.html',
+		title: 'Title'
+	};  	  
 });
 // AUTO RUN
 app.run( function($rootScope, $location, $routeParams, vault) {
@@ -159,8 +189,16 @@ app.run( function($rootScope, $location, $routeParams, vault) {
 		$rootScope.showMsg = {};
 		$rootScope.logIn = function(){vault.logIn();}
 		$rootScope.logOut = function(m){vault.logOut(m);}
+		$rootScope.isIE = vault.isIE();
 		
 		vault.logIn();
+		
+		$rootScope.adminDropNodes = function(u){
+			if(confirm('Do you really want to drop ' + u + '?'))
+			{
+				vault.adminDropNodes(u);
+			}			
+		}
     });
 });
 // SERVICES
@@ -173,6 +211,12 @@ app.service('vault', function($http, $rootScope, $timeout, $interval) {
 		m = r.message ? r.message : r;
 		switch(m)
 		{
+			case 'ADMINNODESDROPPED': $rootScope.showMsg.success = 'Success! User ' + r.user + ' dropped!';
+			break;
+			case 'JOBNAME': $rootScope.showMsg.error = 'Please enter Job Name!';
+			break;
+			case 'JOBNAMEOVERFLOW': $rootScope.showMsg.error = 'Name can\'t be more than 40 characters!';
+			break;
 			case 'ERROR': $rootScope.showMsg.error = 'MySQL connection error :( ...';
 			break;
 			case 'RESTRICTED':
@@ -210,6 +254,11 @@ app.service('vault', function($http, $rootScope, $timeout, $interval) {
 			case 'STARTSERVICE':  $rootScope.showMsg.warn = 'Start ' + p + ' on all reserved nodes! Update the status in few minutes...';
 			break;
 		}
+	}
+	
+	var isIE = function()
+	{
+		return navigator.userAgent.indexOf('MSIE') > 0;
 	}
 	
 	// SIMPLIFY POST PROCEDURE
@@ -358,8 +407,32 @@ app.service('vault', function($http, $rootScope, $timeout, $interval) {
 	}
 	
 	var getNodes = function()
-	{		
-		var json = $rootScope.checkResults;
+	{	
+		var nodes = $rootScope.checkResults;
+		
+		if(!nodes.length) {
+			showMsg('NONODES');
+			return false;
+		}
+		
+		var jobName = prompt("Please enter job name", "");			
+			
+		if(!jobName || !jobName.length) {			
+			showMsg('JOBNAME');
+			
+			return false;
+		}
+		
+		if(jobName.length > 40){
+			showMsg('JOBNAMEOVERFLOW');
+			
+			return false;
+		}
+			
+		var json = {};
+		json.nodes = nodes;
+		json.job = jobName;
+		
 		HttpPost('getNodes', json).then(function(r){
 			showMsg(r.data);				
 			getDR();			
@@ -370,11 +443,28 @@ app.service('vault', function($http, $rootScope, $timeout, $interval) {
 	}
 	
 	var dropNodes = function()
-	{			
+	{	
+		sendCmd('DROP');	
 		httpGet('dropNodes').success(function(r){
 			showMsg(r);
 			getDR();
 		});	
+	}
+	
+	// ADMIN COMMANDS
+	var adminDropNodes = function(u){
+		
+		var json = {'user': u};
+		HttpPost('adminDropNodes', json).then(function(r){
+			r.data.message = 'ADMIN' + r.data.message;
+			r.data.user = u;
+			showMsg(r.data);				
+			
+			getDR();			
+		}, 
+		function(r){			
+			console.log(r);
+		});		
 	}
 		
   return {
@@ -387,9 +477,11 @@ app.service('vault', function($http, $rootScope, $timeout, $interval) {
 	logOut: logOut,
 	getNodes: getNodes,
 	dropNodes: dropNodes,
-	rebootNodes: rebootNodes
+	rebootNodes: rebootNodes,
+	showMsg: showMsg,
+	isIE: isIE,
+	adminDropNodes, adminDropNodes
   };
-
 
 });
 

@@ -8,7 +8,7 @@
 	{
 		$USER = HTMLSPECIALCHARS($USER);
 		
-		ECHO mysqliUserNodes($USER);		
+		ECHO mysqliDropNodes($USER);		
 	}
 	ELSE
 	{

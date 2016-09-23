@@ -1,8 +1,14 @@
 <?php 
 	
 	
-	// FUNCTIONS
-	
+	// WEB FUNCTIONS
+	FUNCTION Strip($S)
+	{
+		$S = STR_REPLACE('"', "", $S);
+		$S = HTMLSPECIALCHARS($S);
+		$S = PREG_QUOTE($S);
+		RETURN $S;
+	}
 	FUNCTION mysqliConnect()
 	{
 		$MYSQL_SERVER = $GLOBALS['MYSQL_SERVER'];
@@ -149,13 +155,13 @@
 		
 		$OUT = '{"message": "NONODES"}';
 		
-		$QUERY = 'UPDATE dr SET user=null WHERE user="' . $USER . '";';
+		$QUERY = 'UPDATE dr SET user=null, job=null WHERE user="' . $USER . '";';
 		$RESULT = $MYSQLI->query($QUERY);
 		
 		$COUNT = 0;
-		
-		FOREACH ($DATA as $KEY => $VALUE) {
-			$QUERY = 'UPDATE dr SET user="' . $USER . '" WHERE ip="' . $VALUE . '" AND user IS NULL;';
+		$JOB = Strip($DATA->job);
+		FOREACH ($DATA->nodes as $KEY => $VALUE) {
+			$QUERY = 'UPDATE dr SET user="' . $USER . '", job="' . $JOB . '" WHERE ip="' . $VALUE . '" AND user IS NULL;';
 			$RESULT = $MYSQLI->query($QUERY);
 			
 			IF($MYSQLI->affected_rows)
@@ -179,8 +185,9 @@
 			ECHO "ERROR";
 			RETURN FALSE;
 		}
-						
-		$QUERY = 'UPDATE dr SET user=null WHERE user="' . $USER . '";';
+		$USER = Strip($USER);
+		
+		$QUERY = 'UPDATE dr SET user=null, job=null WHERE user="' . $USER . '";';
 		$RESULT = $MYSQLI->query($QUERY);
 						
 		$MYSQLI->CLOSE();
@@ -217,6 +224,7 @@
 		ECHO $OUT ;
 	}
 	
+	// EXE FUNCTIONS
 	FUNCTION exeSetData($DATA)
 	{
 		IF(!isIPExist($DATA->ip)) 
@@ -259,6 +267,42 @@
 		RETURN 'OK';
 	}
 	
+	FUNCTION exeSetData1($USER, $SERVICE, $CPU, $NAME, $IP)
+	{
+		IF(!isIPExist($IP)) 
+		{			
+			RETURN 'ERROR';
+		}
+		
+		$MYSQLI = mysqliConnect();
+		
+		IF($MYSQLI->connect_errno) {
+			ECHO 'ERROR';
+			RETURN FALSE;
+		}
+				
+		$ATTACH = "";
+		SWITCH ($USER) {
+			CASE 'NO':
+				$ATTACH = "";
+			BREAK;
+			CASE 'CLEAR':
+				$ATTACH = "user=null";
+			BREAK;
+			DEFAULT:
+				$ATTACH = "user='" . $USER . "'";
+			BREAK;
+		}
+		
+		$QUERY = "UPDATE dr SET cpu='" . $CPU . "', services='" . $SERVICE . "', name='" . $NAME . "' " . $ATTACH ." WHERE ip='" . $IP . "'";		
+		$RESULT = $MYSQLI->query($QUERY);		
+
+			
+		$MYSQLI->CLOSE();
+		
+		RETURN 'OK';
+	}
+	
 	FUNCTION exeInsertData($DATA)
 	{		
 		$IP = HTMLSPECIALCHARS($DATA->ip);
@@ -279,11 +323,25 @@
 		RETURN 'OK';
 	}
 	
-	FUNCTION exeGetServices()
-	{		
-		$IP = HTMLSPECIALCHARS($DATA->ip);
-		$NAME = HTMLSPECIALCHARS($DATA->name);	
+	FUNCTION exeInsertData1($NAME, $IP)
+	{							
+		$MYSQLI = mysqliConnect();
+		
+		IF($MYSQLI->connect_errno) {
+			ECHO 'ERROR';
+			RETURN FALSE;
+		}
 				
+		$QUERY = "INSERT IGNORE INTO dr(name,ip) VALUES('" . $NAME . "', '" . $IP . "');";		
+		$RESULT = $MYSQLI->query($QUERY);		
+			
+		$MYSQLI->CLOSE();
+
+		RETURN 'OK';
+	}
+	
+	FUNCTION exeGetServices()
+	{						
 		$MYSQLI = mysqliConnect();
 		
 		IF($MYSQLI->connect_errno) {

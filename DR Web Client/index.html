@@ -41,13 +41,13 @@
 	<div id="navbar3" class="navbar-collapse collapse">
         <ul class="nav navbar-nav navbar-right">
           <li class="active"><a href="#/">Home</a></li>
-		  <li class="active"><a href="#/">Admin</a></li>
-          <li><a href="#">About</a></li>
+		  <li class="active" ng-show="userInfo.admin"><a href="#/admin">Admin</a></li>
+          <li><a href="#/about">About</a></li>
 		  <li><a href="" ng-show="!userInfo.logged" ng-click="logIn()"><span class="glyphicon glyphicon-log-in"></span> Log In</a></li>
           <li class="dropdown" ng-show="userInfo.logged">
             <a href="" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">User <span class="caret"></span></a>
             <ul class="dropdown-menu" role="menu">
-              <li class="dropdown-header">{{userInfo.user}}</li>
+              <li class="dropdown-header">Hi <span ng-show="userInfo.admin">admin</span>, {{userInfo.user}}</li>
 			   <li class="divider"></li>
 			  <li><a href="" ng-click="logOut()"><span class="glyphicon glyphicon-log-out"></span> Log Out</a></li>         
             </ul>

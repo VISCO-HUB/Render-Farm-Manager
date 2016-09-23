@@ -33,8 +33,7 @@
 			$_SESSION['logged'] = false;		
 		}
 	}
-				
-		
+						
 	IF ($_SESSION['logged'] === false) {
 		
 		IF(ISSET($_SERVER['PHP_AUTH_USER']) && IN_ARRAY(HTMLSPECIALCHARS($_SERVER['PHP_AUTH_USER']), $ALLOWED_USERS))
@@ -60,7 +59,7 @@
 		}						
 	}
 	
-	IF ($_SESSION["logged"] === false) {		
+	IF ($_SESSION['logged'] === false) {		
 		$_SESSION['logged'] = false;
 		SESSION_DESTROY();
 	}
@@ -69,6 +68,7 @@
 	$JSON['ip'] = $_SERVER['REMOTE_ADDR'];
 	$JSON['user'] = $_SESSION['user'];	
 	$JSON['logged'] = $_SESSION['logged'];	
+	$JSON['admin'] = IN_ARRAY($_SESSION['user'], $SUPER_USERS);	
 			
 	ECHO JSON_ENCODE($JSON);	
 ?>
