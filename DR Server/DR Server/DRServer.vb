@@ -199,14 +199,21 @@ Module DRServer
         Dim getString As String = "ip=" & GetComputerIP() & "&name=" & GetComputerName()
         Return sendWebGetReques(URL & "exeInsertData1.php?" & getString)
     End Function
+    Public Function getUser()
+        Dim getString As String = "ip=" & GetComputerIP()
+        Return sendWebGetReques(URL & "exeGetUser.php?" & getString)
+    End Function
+    Public Function dropNode()
+        Dim getString As String = "ip=" & GetComputerIP()
+        Return sendWebGetReques(URL & "exeDropNode.php?" & getString)
+    End Function
     Public Function setData(Optional ByVal isBackBurener As Int16 = 0)
 
         serviceStatus = String.Empty
         getServices()
-        Dim user As String = "NO"
+        Dim user As String = "NONE"
 
         If (isBackBurener = 1) Then user = "BackBurner"
-        If (isBackBurener = 2) Then user = "CLEAR"
 
         'Dim Data As String = "{""ip"":""" & GetComputerIP() & """, ""name"":""" & GetComputerName() & """, ""cpu"":""" & cpuLoad & """, ""service"":""" & serviceStatus & """, ""user"":""" & user & """}"
         Dim getString As String = "ip=" & GetComputerIP() & "&name=" & GetComputerName() & "&cpu=" & cpuLoad & "&service=""" & serviceStatus & """" & "&user=" & user
@@ -214,6 +221,7 @@ Module DRServer
         Return sendWebGetReques(URL & "exeSetData1.php?" & getString)
         'Return sendWebRequest(URL & "exeSetData.php", Data)
     End Function
+
     Public Sub stopAllServices()
         Dim sevices As ArrayList = getServices()
 
@@ -234,6 +242,7 @@ Module DRServer
                 If s.ServiceName = srv Then
                     If s.Status = ServiceControllerStatus.Running Then
                         s.Stop()
+                        s.WaitForStatus(ServiceControllerStatus.Stopped)
                     End If
                 End If
             Next
@@ -283,10 +292,10 @@ Module DRServer
 
         Return "OK"
     End Function
-    Private Function dropNode() As String
-        stopAllServices()
-        Return startService(BACKBURNERSRV)
-    End Function
+    'Private Function dropNode() As String
+    '    stopAllServices()
+    '    Return startService(BACKBURNERSRV)
+    'End Function
     Private Function stopService(ByVal name As String) As String
         Try
             Dim sc = New System.ServiceProcess.ServiceController(name)
@@ -318,8 +327,10 @@ Module DRServer
 
             Select Case cmds(0)
                 Case "STARTSERVICE"
+                    busyCnt = 0
                     Console.WriteLine("START SERVICE: {1}", cmds)
                     mstrResponse = startService(cmds(1))
+                    setData()
                 Case "STOPSERVICE"
                     Console.WriteLine("STOP SERVICE: {1}", cmds)
                     mstrResponse = stopService(cmds(1))
@@ -394,7 +405,7 @@ Module DRServer
     Private Sub tick(ByVal sender As Object, ByVal e As System.Timers.ElapsedEventArgs) Handles cpuTimer.Elapsed
         If cpuCount = 1 Then
             cpuLoad = Int(cpuUsage.NextValue().ToString).ToString
-
+            setData()
             cpuCount = 0
         Else
             cpuCount += 1
@@ -409,10 +420,11 @@ Module DRServer
 
                     stopAllServices()
                     s.Start()
+                    s.WaitForStatus(ServiceControllerStatus.Running)
                 End If
             End If
         Next
-        setData(2)
+        dropNode()
     End Sub
     Private Sub setNodeBusy()
         For Each s As ServiceController In ServiceController.GetServices()
@@ -425,10 +437,12 @@ Module DRServer
     End Sub
     Private Sub tickBusy(ByVal sender As Object, ByVal e As System.Timers.ElapsedEventArgs) Handles busyTimer.Elapsed
         busyTime = Int(objIniFile.GetString("MAIN", "BUSYTIME", ""))
+        Dim user As String = getUser()
 
-        If Int(cpuLoad) < 60 Then ' If Free
 
-            If busyCnt >= busyTime Then
+        If Int(cpuLoad) < 60 And user = "null" Then ' If Free
+
+            If busyCnt >= busyTime Or user = "null" Then
                 startBackBurner()
             End If
 

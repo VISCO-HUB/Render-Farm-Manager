@@ -2,7 +2,9 @@ try(DestroyDialog _DR)catch()
 
 global _DR_PATH = getFileNamePath (getThisScriptFileName())
 global _DR_INI = _DR_PATH + "settings.ini"
-global  _DR_STARTUP = _DR_PATH + "DR_STARTUP.ms"
+global _DR_START = "DR_STARTUP.ms"
+global _DR_STARTUP = _DR_PATH + _DR_START
+global _DR_INSTALLED_STARTUP = (getDir #startupScripts) + @"\" + _DR_START
 
 rollout _DR "Distributed Rendering Settings" 
 (
@@ -99,20 +101,30 @@ rollout _DR "Distributed Rendering Settings"
 		_URL = getINISetting _DR_INI "MAIN" "URL"
 		if(_URL == undefined or _URL == "") do return messageBox "Please set correct Ulr in settings.ini"
 		WebBrowser.url = dotNetObject "System.Uri" _URL
-				
-		startupScripts = (getDir #startupScripts) + @"\"
-		monitorScript = startupScripts + (filenameFromPath  _DR_STARTUP)		
-		if(not doesFileExist monitorScript) do
+					
+		_INSTALLED = getINISetting _DR_INI "INSTALLED" (getUser())
+		
+		if(not doesFileExist _DR_INSTALLED_STARTUP or _INSTALLED == "") do
 		(
 			f = @"c:\temp\"
 			
 			makeDir f
 			f += "install.bat"
-			s = "xcopy \"" + _DR_STARTUP + "\" \"" + startupScripts  + "\" /Y"
-				
+			
+			s = ""
+			s += "del /F /Q \"" + _DR_INSTALLED_STARTUP + "\""
+			s += "\ncopy \"" + _DR_STARTUP + "\" \"" + _DR_INSTALLED_STARTUP  + "\" /Y"
+			print s	
 			writeFile f s
 		
-			HiddenDOSCommand drInstallLnk 											
+			setIniSetting _DR_INI "INSTALLED" (getUser()) "true"
+			
+			HiddenDOSCommand (_DR_PATH + "install.lnk") 
+			try
+			(
+				fileIn _DR_INSTALLED_STARTUP
+				setIniSetting _DR_INI "INSTALLED" (getUser()) "true"
+			)catch()
 		)
 		
 		drSettings t:#get	

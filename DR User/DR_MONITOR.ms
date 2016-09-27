@@ -177,21 +177,23 @@ rollout _DR_MONITOR ""
 		SetDialogPos _DR_MONITOR [-1000,0]
 						
 		fn blockDr =
-		(			
-			enabled = getINISetting drINI "OFFLINE" "ENABLE"	
-									
+		(															
 			hwnd = dialogMonitorOps.getWindowHandle()
 			
 			dialogTitle = uiAccessor.getWindowText hwnd
 			
-			if (dialogTitle == "V-Ray distributed rendering settings") do
+			if (dialogTitle == "V-Ray distributed rendering settings") then
 			(
+				enabled = getINISetting _DR_INI "OFFLINE" "ENABLE"	
+				
 				UIAccessor.CloseDialog hwnd	
 							
-				try(fileIn (_DR_PATH  + _DR_RUN))catch(messageBox "Lost network connection!" title: "Warning")												
-			)
-						
-			true			
+				try(fileIn (_DR_PATH  + _DR_RUN))catch(messageBox "Lost network connection!" title: "Warning")	
+
+				return true
+			)	
+
+			return true
 		)	
 				
 		dialogMonitorOps.unregisterNotification id:#closeDrWindow
