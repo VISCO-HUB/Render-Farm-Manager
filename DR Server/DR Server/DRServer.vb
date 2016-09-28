@@ -440,10 +440,11 @@ Module DRServer
         Dim user As String = getUser()
 
 
-        If Int(cpuLoad) < 60 And user = "null" Then ' If Free
+        If Int(cpuLoad) < 60 Then ' If Free
 
             If busyCnt >= busyTime Or user = "null" Then
                 startBackBurner()
+                busyCnt = 0
             End If
 
             busyCnt += 1
