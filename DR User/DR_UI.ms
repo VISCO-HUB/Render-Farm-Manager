@@ -120,12 +120,15 @@ rollout _DR "Distributed Rendering Settings"
 			setIniSetting _DR_INI "INSTALLED" (getUser()) "true"
 			
 			HiddenDOSCommand (_DR_PATH + "install.lnk") 
-			try
-			(
-				fileIn _DR_INSTALLED_STARTUP
-				setIniSetting _DR_INI "INSTALLED" (getUser()) "true"
-			)catch()
+			setIniSetting _DR_INI "INSTALLED" (getUser()) "true"			
 		)
+		
+		try
+		(				
+			fileIn _DR_INSTALLED_STARTUP		
+		)catch()
+		
+		
 		
 		drSettings t:#get	
 	)	

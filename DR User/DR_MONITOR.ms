@@ -31,10 +31,23 @@ fn isVray =
 	return false
 )
 
-fn distributedOn s =
+fn isCorona =
+(
+	_Corona = renderers.current
+	if(matchPattern (_Corona as string) pattern:"Corona*") do return true
+	return false
+)
+
+fn distributedOnVray s =
 (
 	_Vray = renderers.current
 	if(isVray() == true) do _Vray.system_distributedRender = s
+)
+
+fn distributedOnCorona s =
+(
+	_Corona = renderers.current
+	if(isCorona() == true) do _Corona.dr_enable = s
 )
 
 fn httpGet url =
@@ -50,12 +63,21 @@ fn httpGet url =
 
 fn getUserNodes =
 (
-	url = _URL + "vault/mxs/mxsGetUserNodes.php?user=" + getUser()
+	url = _URL + "vault/mxs/mxsVrayGetUserNodes.php?user=" + getUser()
 	r = httpGet url
 		
 	if(r == "NONODES") do return ""
 	return r
 )	
+
+fn getCoronaUserNodes =
+(
+	url = _URL + "vault/mxs/mxsCoronaGetUserNodes.php?user=" + getUser()
+	r = httpGet url
+		
+	if(r == "NONODES") do return ""
+	return r
+)
 
 fn deleteUser =
 (
@@ -79,6 +101,27 @@ fn getIniVrayParams p d: "0" t: #boolint =
 	return s
 )
 
+fn checkNodesCorona =
+(	
+	dr_cfg = (getDir #plugcfg) + @"\corona_dr.txt"
+	
+	n = getCoronaUserNodes()
+		
+	f = openFile dr_cfg mode: "wt"
+		
+	for i in (filterString n ";") do 
+	(
+		format (i + "\n") to:f
+	)
+	
+	flush f
+	close f
+	
+	distributedOnCorona true
+	
+	CoronaRenderer.CoronaFp.loadDrIpFile dr_cfg
+)
+
 fn checkNodesVray =
 (
 	udr = #()
@@ -91,7 +134,7 @@ fn checkNodesVray =
 	-- Clear config
 	if(n == "NONODES" or n == "ERROR") do 
 	(		
-		distributedOn false
+		distributedOnVray false
 		
 		deleteFile dr_cfg
 		
@@ -103,7 +146,7 @@ fn checkNodesVray =
 		return false
 	)
 
-	distributedOn true
+	distributedOnVray true
 		
 	deleteFile dr_cfg
 	
@@ -153,7 +196,12 @@ fn checkNodes =
 	if(isVray()) do 
 	(	
 		checkNodesVray()
-	)		
+	)
+
+	if(isCorona()) do
+	(
+		checkNodesCorona()
+	)
 )
 
 rollout _DR_MONITOR ""
