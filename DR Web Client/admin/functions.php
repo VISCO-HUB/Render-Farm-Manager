@@ -1,25 +1,39 @@
 <?php 
+
+	FUNCTION mysqliSelect($MYSQLI, $QUERY){		
+		$JSON = ARRAY();
+		IF ($RESULT = $MYSQLI->query($QUERY)) {
+			
+			WHILE($ROW = $RESULT->fetch_object()) {
+				$JSON[] = $ROW;							
+			}							
+		}
 	
-	
-	// WEB FUNCTIONS
-	FUNCTION Strip($S)
-	{
-		$S = STR_REPLACE('"', "", $S);
-		$S = HTMLSPECIALCHARS($S);
-		$S = PREG_QUOTE($S);
-		RETURN $S;
+		RETURN JSON_ENCODE($JSON);
 	}
-	FUNCTION mysqliConnect()
-	{
-		$MYSQL_SERVER = $GLOBALS['MYSQL_SERVER'];
-		$MYSQL_USER = $GLOBALS['MYSQL_USER'];
-		$MYSQL_PWD = $GLOBALS['MYSQL_PWD'];
-		$MYSQL_DB = $GLOBALS['MYSQL_DB'];
+
+	FUNCTION adminDR($MYSQLI)
+	{	
+		$QUERY = "SELECT * FROM dr;";
 		
-		
-		RETURN NEW MYSQLI($MYSQL_SERVER, $MYSQL_USER, $MYSQL_PWD, $MYSQL_DB);	
+		RETURN mysqliSelect($MYSQLI, $QUERY);
 	}
 	
+	FUNCTION adminGetServices($MYSQLI)
+	{				
+		$QUERY = "SELECT * FROM services;";
+		
+		RETURN mysqliSelect($MYSQLI, $QUERY);
+	}
+	
+	FUNCTION adminGetUsers($MYSQLI)
+	{		
+		$QUERY = "SELECT * FROM users;";
+		
+		RETURN mysqliSelect($MYSQLI, $QUERY);
+	}
+	
+	/*
 	FUNCTION getSrv($SERVICES)
 	{
 		$RUNNINGSRV = '';										
@@ -30,27 +44,6 @@
 		}
 		
 		RETURN $RUNNINGSRV;
-	}
-	
-	FUNCTION isUserAllow($USER)
-	{
-		$USER = Strip($USER);
-		
-		$MYSQLI = mysqliConnect();
-		
-		IF($MYSQLI->connect_errno) {
-			RETURN FALSE;
-		}
-		
-		$QUERY = "SELECT * FROM users WHERE user='" . $USER . "';";
-		$RESULT = $MYSQLI->query($QUERY);		
-		$COUNT = MYSQLI_NUM_ROWS($RESULT);		
-		$MYSQLI->CLOSE();
-		
-		IF($COUNT != 1) RETURN -1;
-		
-		$ROW = $RESULT->fetch_object();					
-		RETURN $ROW;
 	}
 	
 	FUNCTION isIPExist($IP)
@@ -486,5 +479,5 @@
 		$MYSQLI->CLOSE();
 
 		RETURN $S;
-	}	
+	}	*/
 ?>

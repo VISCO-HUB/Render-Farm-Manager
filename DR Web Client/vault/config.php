@@ -10,17 +10,5 @@
 	$MYSQL_PWD = '!Genius!';
 	
 	// SOCKET DATA
-	$PORT = 55001;
-	
-	// ALLOWED USERS
-	$ALLOWED_USERS = [
-		'v.lukyanenko', 
-		'o.labintsev',
-		'e.astafiev'		
-	];
-	
-	$SUPER_USERS = [
-		'v.lukyanenko',
-		'e.astafiev'
-	];
+	$PORT = 55001;	
 ?>

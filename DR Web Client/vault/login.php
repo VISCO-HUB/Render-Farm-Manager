@@ -19,42 +19,48 @@
 		EXIT;
 	}
 
+	$RIGHTS = -1;
+	
 	IF (!ISSET($_SESSION['logged'])) {
 		$_SESSION['logged'] = false;
 		AUTH();
 	} 
 	ELSE 
 	{
-		IF (ISSET($_SESSION['user']) && IN_ARRAY($_SESSION['user'], $ALLOWED_USERS)) {				
+		$USER = isUserAllow($_SESSION['user']);
+		
+		IF (ISSET($_SESSION['user']) && $USER !== -1) {				
 				$_SESSION['logged'] = true;
+				$RIGHTS = $USER->rights;
 		}
 		ELSE
 		{
 			$_SESSION['logged'] = false;		
 		}
 	}
-						
+			
 	IF ($_SESSION['logged'] === false) {
+				
+		$USER = isUserAllow($_SERVER['PHP_AUTH_USER']);
 		
-		IF(ISSET($_SERVER['PHP_AUTH_USER']) && IN_ARRAY(HTMLSPECIALCHARS($_SERVER['PHP_AUTH_USER']), $ALLOWED_USERS))
+		IF(ISSET($_SERVER['PHP_AUTH_USER']) && $USER !== -1)
 		{
 			$_SESSION["logged"] = true;	
-			
+			$RIGHTS = $USER->rights;
+						
 			$_SESSION["user"] = HTMLSPECIALCHARS($_SERVER['PHP_AUTH_USER']);
 			$PW = HTMLSPECIALCHARS($_SERVER['PHP_AUTH_PW']);
 			
-			$DATA = mysqliGetUser($_SESSION["user"]);
-
-			IF(ISSET($DATA[0]->pwd))
+			IF(!EMPTY($USER->pwd))
 			{				
-				IF($DATA[0]->pwd != $PW)
+				IF($USER->pwd != MD5($PW))
 				{
 					$_SESSION['logged'] = false;	
 				}	
 			}
 			ELSE
 			{		
-				mysqliSetUser($_SESSION['user'], $PW);
+				mysqliSetUser($_SESSION['user'], MD5($PW));
 			}			
 		}						
 	}
@@ -68,7 +74,7 @@
 	$JSON['ip'] = $_SERVER['REMOTE_ADDR'];
 	$JSON['user'] = $_SESSION['user'];	
 	$JSON['logged'] = $_SESSION['logged'];	
-	$JSON['admin'] = IN_ARRAY($_SESSION['user'], $SUPER_USERS);	
+	$JSON['admin'] = $RIGHTS == 1;	
 			
 	ECHO JSON_ENCODE($JSON);	
 ?>

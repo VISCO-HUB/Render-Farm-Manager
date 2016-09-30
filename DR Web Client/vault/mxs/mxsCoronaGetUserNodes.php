@@ -8,11 +8,11 @@
 	{
 		$USER = HTMLSPECIALCHARS($USER);
 		
-		ECHO mysqliDropNodes($USER);		
+		ECHO mysqliCoronaUserNodes($USER);		
 	}
 	ELSE
 	{
-		ECHO 'ERROR';	
+		ECHO '';	
 	}
 	
 ?>

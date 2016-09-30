@@ -14,6 +14,7 @@
 	Vb Net
 	Dot Net
 	MaxScript
+	Batch
 
 */
 
@@ -26,6 +27,7 @@
 	Создание глобального статуса - вкл./выкл. сервис
 	Перезагрузска всех нод
 	Выключение сервисов на всех нодах
+	Mail notifications
 */
 
 /* GLOBAL FUNCTIONS */
@@ -42,6 +44,10 @@ Array.prototype.makeUnique = function(){
    return a;
 }
 
+document.addEventListener("contextmenu", function(e){
+    e.preventDefault();
+}, false);
+
 /* APP */
 
 var app = angular.module('app', ['ngRoute', 'ngSanitize', 'ui.bootstrap']);
@@ -55,7 +61,7 @@ app.config(function($routeProvider) {
 		controller: 'homeCtrl'
     })
     .when("/admin", {
-        templateUrl : "templates/admin.html",
+        templateUrl : "templates/admin.php",
 		controller: 'adminCtrl'
     })  
 	.when("/about", {
@@ -71,18 +77,63 @@ app.controller("aboutCtrl", function($scope){
 	
 });
 	// ADMIN
-app.controller("adminCtrl", function($scope){
+app.controller("adminCtrl", function($scope, $rootScope, admin){
+	$scope.adminSection = 'global';
+	$rootScope.adminDR = [];
+	$rootScope.adminServices = [];
+	$rootScope.checkAdminDR = [];
+	$rootScope.adminUsers = [];
+	$rootScope.checkAdminUsers = [];
+	
+	admin.adminDR();
+	admin.adminServices();
+	admin.adminUsers()
+	
+	$scope.installedServices = function(s){	
+		var out = '';
+		
+		angular.forEach(s.split(';'), function(value, key){
+			var r = value.split('=');
+			if(r[1] != 'notfound' && r[0]) {out += r[0] + ', '}
+		});
+		
+		return out.slice(0, -2);
+	}
 	
 });
 	// HOME
-app.controller("homeCtrl", function ($scope, vault, $timeout, $rootScope) {
+app.controller("homeCtrl", function ($scope, vault, $timeout, $interval, $rootScope) {
 	// sendChallange 
 	$rootScope.firstLoad = 0;
+	vault.getServices();
+	
+	$rootScope.otherUsers = [];
 	
 	$rootScope.sendChallange = function(){
-		vault.sendChallenge();
+		//vault.sendChallenge();
+		$rootScope.firstLoad = 10;
+		
+		vault.getDR();
 		$scope.search = '';
 		$rootScope.showMsg = {}
+	}
+	
+	$scope.uncheckAll = function() {
+		$rootScope.checkModel = {};
+	}
+	
+	$scope.checkFree = function() {
+		$rootScope.checkModel = {};
+		angular.forEach($rootScope.dr, function(value, key){
+			if(value.user == '' || value.user == null){
+				$rootScope.checkModel[value.ip] = true;
+			}
+		});
+	}
+	
+	$scope.getLastNodes = function(){
+		$rootScope.checkModel = {};
+		vault.getLastNodes();
 	}
 	
 	$scope.startService = function(name){
@@ -101,7 +152,7 @@ app.controller("homeCtrl", function ($scope, vault, $timeout, $rootScope) {
 	
 	$scope.dropNodes = function()
 	{		
-		vault.dropNodes();
+		vault.dropNodes();	
 	}
 	
 	$scope.isReserved = function(user)
@@ -109,20 +160,22 @@ app.controller("homeCtrl", function ($scope, vault, $timeout, $rootScope) {
 		return user != null && $rootScope.userInfo && user != $rootScope.userInfo.user;
 	}
 	
-	//$scope.orderNodes = 'name';
-	$scope.reverse = true;
+	$scope.orderNodes = 'name';
+	$scope.reverse = false;
 	
 	$scope.orderByParam = function(x) {
 		$scope.reverse = !$scope.reverse;
 		$scope.orderNodes = x;
 	}
-	
+		
+	$rootScope.startingSpawners = false;	
+	$rootScope.currentService = '';		
 	
 	$scope.runService = function(x){		
-		$rootScope.currentService = 'Spawners';
-		
+						
 		if(x != null && x != '')
 		{
+			$rootScope.startingSpawners = true;
 			$rootScope.currentService = x;
 			vault.startService(x);
 		}
@@ -148,8 +201,11 @@ app.controller("homeCtrl", function ($scope, vault, $timeout, $rootScope) {
 		});		
 		return serviceInfo;
 	}*/
-		
-	vault.getDR();
+	
+		var timer = $interval( function(){					
+			vault.getDR();
+		}, 1000);	
+	
 
 	$rootScope.checkModel = {};
 	$scope.$watchCollection('checkModel', function () {
@@ -165,18 +221,13 @@ app.controller("homeCtrl", function ($scope, vault, $timeout, $rootScope) {
 		if(disabled) {return false}
 				
 		if(e.buttons == 1){			
-			$rootScope.checkModel[ip] = !$rootScope.checkModel[ip];
+			//$rootScope.checkModel[ip] = !$rootScope.checkModel[ip];
+			$rootScope.checkModel[ip] = true;
 		}
-		/*if(e.buttons == 2){
+		if(e.buttons == 2){
 			$rootScope.checkModel[ip] = false;
-		}*/
-	  }	
-
-	$scope.adminMenu = {
-		content: {},
-		templateUrl: 'adminMenu.html',
-		title: 'Title'
-	};  	  
+		}
+	  }		 	 
 });
 // AUTO RUN
 app.run( function($rootScope, $location, $routeParams, vault) {
@@ -202,6 +253,74 @@ app.run( function($rootScope, $location, $routeParams, vault) {
     });
 });
 // SERVICES
+
+app.service('admin', function($http, $rootScope, $timeout, $interval) {	
+	
+	// SIMPLIFY POST PROCEDURE
+	var HttpPost = function(file, json)
+	{		
+		return $http({
+			url: 'admin/' + file + '.php?time=' + new Date().getTime(),
+			method: "POST",
+			data: json
+		});
+	}
+	
+	var httpGet = function(query)
+	{		
+		return $http.get('admin/admin.php?query=' + query + '&time=' + new Date().getTime());
+	}
+	
+	// GET DR
+	var adminDR = function()
+	{	
+		httpGet('getDR').success(function(r){
+			$rootScope.adminDR = [];
+			
+			if(!r.message) {$rootScope.adminDR = r;}							
+		});		 			
+	}
+	
+	var adminServices = function()
+	{	
+		httpGet('getServices').success(function(r){
+			$rootScope.adminServices = [];
+			
+			if(!r.message) {$rootScope.adminServices = r;}							
+		});		 			
+	}
+	
+	var adminUsers = function()
+	{	
+		httpGet('getUsers').success(function(r){
+			$rootScope.adminUsers = [];
+			
+			if(!r.message) {$rootScope.adminUsers = r;}							
+		});		 			
+	}
+	
+	// SEND COMMAND TO ALL SERVERS	
+	var sendCmd = function(cmd)
+	{
+		var a = $rootScope.dr;
+		
+		for(var i = 0; i < a.length; i++)  
+		{			
+			var ip = a[i].ip;
+			
+			socket(ip, cmd);						
+		}	
+	}
+	
+	return {
+		sendCmd: sendCmd,
+		adminDR: adminDR,
+		adminServices: adminServices,
+		adminUsers: adminUsers
+	};
+});
+
+
 app.service('vault', function($http, $rootScope, $timeout, $interval) {
 	// MESSAGES
 	var showMsg = function(r, p)
@@ -229,7 +348,7 @@ app.service('vault', function($http, $rootScope, $timeout, $interval) {
 			{
 				if($rootScope.checkResults.length)
 				{	
-					$rootScope.showMsg.success = 'Success. All nodes are dropped!'; 
+					$rootScope.showMsg.success = 'Success. All nodes are dropped! Automatically starting BackBurner service...'; 
 				}
 				else
 				{
@@ -287,22 +406,29 @@ app.service('vault', function($http, $rootScope, $timeout, $interval) {
 	}
 	// GET DR
 	var getDR = function()
-	{
+	{	
 		httpGet('getDR').success(function(r){
 			$rootScope.dr = r;
 			$rootScope.reservedDr = [];
+			$rootScope.otherUsers = [];
+			
+			var runninSrv = [];
 			
 			angular.forEach(r, function(value, key){
-				$rootScope.checkModel[value.ip] = false;				
+				if(value.user != null) {$rootScope.checkModel[value.ip] = false;}	
+				
+				if(value.user != '' && value.user != null && $rootScope.otherUsers.indexOf(value.user) == -1) {$rootScope.otherUsers.push(value.user);}
 				
 				if($rootScope.userInfo && value.user === $rootScope.userInfo.user)
 				{
 					$rootScope.checkModel[value.ip] = true;
 					$rootScope.reservedDr.push(value);
+					
+					if(value.services == $rootScope.currentService) {runninSrv.push(true)}			
 				}
 			});			
-			if($rootScope.firstLoad == 0){$rootScope.sendChallange()}			
-			getServices();
+			$rootScope.firstLoad++;
+			$rootScope.startingSpawners = $rootScope.reservedDr.length != runninSrv.length && $rootScope.currentService.length;	
 		});		 			
 	}
 	
@@ -313,7 +439,7 @@ app.service('vault', function($http, $rootScope, $timeout, $interval) {
 		HttpPost('socket', json).then(function(r){
 			$rootScope.socketResponse[ip] =  r.data;
 			
-			getDR();
+			//getDR();
 			$rootScope.firstLoad++;
 		}, 
 		function(r){
@@ -363,14 +489,7 @@ app.service('vault', function($http, $rootScope, $timeout, $interval) {
 	{
 		showMsg('REBOOT');
 		sendCmd('REBOOT');
-		
-		var challangeCnt = 0;
-		var timer = $interval( function(){
-			sendChallenge(); 
-			challangeCnt++;
-			
-			if(challangeCnt > 20) $interval.cancel(timer);
-		}, 3000);
+	
 	}
 	// GET USER INFO
 	var logIn = function()
@@ -443,12 +562,35 @@ app.service('vault', function($http, $rootScope, $timeout, $interval) {
 	}
 	
 	var dropNodes = function()
-	{	
-		sendCmd('DROP');	
+	{			
 		httpGet('dropNodes').success(function(r){
 			showMsg(r);
-			getDR();
+			$rootScope.currentService = '';
+			$rootScope.checkModel = {};	
+			//getDR();
 		});	
+		//sendCmd('DROP');
+	}
+	
+	var getLastNodes = function()
+	{
+		httpGet('getLastNodes').success(function(r){			
+			if(r == 'RESTRICTED') {
+				showMsg(r);
+				return false;
+			}
+			
+			lastNodes = r.split('|');
+			angular.forEach($rootScope.dr, function(value, key){
+				if(value.user == '' || value.user == null){
+					if(lastNodes.indexOf(value.ip) != -1){
+						$rootScope.checkModel[value.ip] = true;
+					}
+				}
+			});
+			
+			//getDR();
+		});
 	}
 	
 	// ADMIN COMMANDS
@@ -467,6 +609,7 @@ app.service('vault', function($http, $rootScope, $timeout, $interval) {
 		});		
 	}
 		
+		
   return {
     socket: socket,
 	sendChallenge: sendChallenge,
@@ -480,7 +623,9 @@ app.service('vault', function($http, $rootScope, $timeout, $interval) {
 	rebootNodes: rebootNodes,
 	showMsg: showMsg,
 	isIE: isIE,
-	adminDropNodes, adminDropNodes
+	adminDropNodes: adminDropNodes,
+	getServices: getServices,
+	getLastNodes: getLastNodes
   };
 
 });

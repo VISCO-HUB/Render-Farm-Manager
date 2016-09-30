@@ -69,7 +69,9 @@
 	
            <div ng-view ng-show="userInfo.logged" ng-class="flip"></div>        
         </div>
-<div ng-show="firstLoad < 1" class="loading"><div class="loading-img"></div></div>
+<div class="loading-container" ng-show="firstLoad < 1 || startingSpawners">		
+	<div class="loading"><div class="loading-img"></div></div>
+</div>
 </body>
 
 </html>
