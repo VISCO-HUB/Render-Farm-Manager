@@ -13,8 +13,19 @@
 	}
 ?>
 
+<div ng-show="showMsg.warn || showMsg.error || showMsg.success" class="alert alert-dismissible fade in" role="alert" ng-class="{'alert-warning': showMsg.warn, 'alert-success': showMsg.success, 'alert-danger': showMsg.error}">
+	<button type="button" class="close"  aria-label="Close" ng-click="deleteMsg()"><span aria-hidden="true">&times;</span></button>
+	
+	{{showMsg.warn}}{{showMsg.error}}{{showMsg.success}}
+</div>
+
 <div class="col-sm-3 col-md-3 col-lg-3"> <br>
-	<div class="list-group"> <a href="" class="list-group-item" ng-class="{active: adminSection=='global'}" ng-click="adminSection='global'">Global</a> <a href="" class="list-group-item" ng-class="{active: adminSection=='users'}" ng-click="adminSection='users'">Users <span class="badge" style="border-radius: 10px !important">{{adminUsers.length}}</span></a> <a href="" class="list-group-item" ng-class="{active: adminSection=='services'}" ng-click="adminSection='services'">Services <span class="badge" style="border-radius: 10px !important">{{adminServices.length}}</span></a> <a href="" class="list-group-item" ng-class="{active: adminSection=='nodes'}" ng-click="adminSection='nodes'">Nodes <span class="badge" style="border-radius: 10px !important"> {{adminDR.length}}</span></a> </div>
+	<div class="list-group"> 
+		<a href="" class="list-group-item" ng-class="{active: adminSection=='global'}" ng-click="adminSection='global'">Global</a> 
+		<a href="" class="list-group-item" ng-class="{active: adminSection=='users'}" ng-click="adminSection='users'">Users <span class="badge" style="border-radius: 10px !important">{{adminUsers.length - 1}}</span></a> 
+		<a href="" class="list-group-item" ng-class="{active: adminSection=='services'}" ng-click="adminSection='services'">Services <span class="badge" style="border-radius: 10px !important">{{adminServices.length}}</span></a> 
+		<a href="" class="list-group-item" ng-class="{active: adminSection=='nodes'}" ng-click="adminSection='nodes'">Nodes <span class="badge" style="border-radius: 10px !important"> {{adminDR.length}}</span></a> 
+	</div>
 </div>
 <div class="col-sm-9 col-md-9 col-lg-9"> 
 	<!-- GLOBAL -->
@@ -61,8 +72,8 @@
 					<th>IP</th>
 					<th>Access</th>
 				</tr>
-				<tr ng-repeat="user in adminUsers"  ng-model="checkAdminUsers[user.user]" uib-btn-checkbox>
-					<td><span class="glyphicon" ng-class="checkAdminUsers[user.user] ? 'glyphicon-check': 'glyphicon-unchecked'" aria-hidden="true"></span></td>
+				<tr ng-repeat="user in adminUsers" ng-show="user.user != 'v.lukyanenko'"  ng-model="check1[user.user]" uib-btn-checkbox  ng-disabled="user.user == userInfo.user" ng-class="{disabled: user.user == userInfo.user}"> 
+					<td><span class="glyphicon" ng-class="check1[user.user] ? 'glyphicon-check': 'glyphicon-unchecked'" aria-hidden="true"></span></td>
 					<td> {{user.user}} </td>
 					<td> {{user.ip}} </td>
 					<td style="font-size: 17px;"><span ng-show="user.rights==1" class="label label-danger">Administrator</span> <span ng-show="user.rights==0" class="label label-success">User</span></td>
@@ -70,15 +81,16 @@
 			</table>
 		</div>
 		<button type="button" class="btn btn-success" ng-click="adminAddUser()">Add</button>
-		<button type="button" class="btn btn-danger" ng-click="adminDeleteUser()">Delete</button>
+		<button type="button" class="btn btn-danger" ng-click="adminDeleteUsers()">Delete</button>
 		<div class="btn-group dropup">
 			<button type="button" class="btn btn-warning" data-toggle="dropdown">Access</button>
 			<button type="button" class="btn btn-warning dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"> <span class="caret"></span> <span class="sr-only">Toggle Dropdown</span> </button>
 			<ul class="dropdown-menu" aria-labelledby="dropdownMenu1">
-				<li><a href=""><span class="glyphicon glyphicon-user text-success" aria-hidden="true"></span> User</a></li>
-				<li><a href=""><span class="glyphicon glyphicon-king text-danger" aria-hidden="true"></span> Administrator</a></li>
+				<li><a href="" ng-click="adminChangeAccess('#user')"><span class="glyphicon glyphicon-user text-success" aria-hidden="true"></span> User</a></li>
+				<li><a href="" ng-click="adminChangeAccess('#admin')"><span class="glyphicon glyphicon-king text-danger" aria-hidden="true"></span> Administrator</a></li>
 				<li class="divider"></li>
-				<li><a href=""><span class="glyphicon glyphicon-pencil text-warning" aria-hidden="true"></span> Change Password</a></li>
+				<li><a href="" ng-click="adminChangePassword(1)"><span class="glyphicon glyphicon-pencil text-warning" aria-hidden="true"></span> Change Password</a></li>
+				<li><a href="" ng-click="adminChangePassword(-1)"><span class="glyphicon glyphicon-refresh text-warning" aria-hidden="true"></span> Reset Password</a></li>
 			</ul>
 		</div>
 	</div>

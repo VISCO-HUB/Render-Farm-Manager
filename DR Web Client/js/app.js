@@ -87,7 +87,7 @@ app.controller("adminCtrl", function($scope, $rootScope, admin){
 	
 	admin.adminDR();
 	admin.adminServices();
-	admin.adminUsers()
+	admin.adminUsers();
 	
 	$scope.installedServices = function(s){	
 		var out = '';
@@ -100,6 +100,82 @@ app.controller("adminCtrl", function($scope, $rootScope, admin){
 		return out.slice(0, -2);
 	}
 	
+	$scope.deleteMsg = function()
+	{
+		$rootScope.showMsg = {};
+	}
+	
+	// USERS
+	
+	$scope.adminAddUser = function(){
+		var userName = prompt("Please enter User name", "");
+			
+		if(!userName || !userName.length) {			
+			admin.showMsg('ADMINBADUSER');
+			
+			return false;
+		}
+
+		admin.adminAddUser(userName);
+	};
+	
+	$scope.adminDeleteUsers = function(){
+		var u = $rootScope.checkAdminUsers;
+		
+		if(!u.length){
+			admin.showMsg('ADMINNOSELECTED');
+			return false;
+		}
+		
+		if(!confirm('Do you really want to delete ' + u.length + ' selected users?')){
+			return false;
+		}
+		
+		admin.adminDeleteUsers(u);
+	};
+	
+	$scope.adminChangeAccess = function(a){
+		var u = $rootScope.checkAdminUsers;
+		
+		if(!u.length){
+			admin.showMsg('ADMINNOSELECTED');
+			return false;
+		}
+		
+		if(!confirm('Do you really want to change access for ' + u.length + ' selected users?')){
+			return false;
+		}
+		
+		admin.adminChangeAccess(u, a);
+	};
+	
+	$scope.adminChangePassword = function(a) {
+		var u = $rootScope.checkAdminUsers;
+		var pwd = '';
+				
+		if(a != -1) {pwd = prompt("Please enter Password (min. 6 characters)", "")};
+			
+		if((!pwd || !pwd.length) && a != -1) {			
+			admin.showMsg('ADMINBADPASSWORD');
+			
+			return false;
+		}
+				
+		admin.adminChangePassword(u, pwd);
+	};
+	
+	
+	// CHECKS
+	$rootScope.check1 = {};
+	$scope.$watchCollection('check1', function () {
+		$rootScope.checkAdminUsers = [];
+		
+		angular.forEach($rootScope.check1, function (value, key) {
+		  if (value) {
+			$rootScope.checkAdminUsers.push(key);			
+		  }
+		});
+	  });
 });
 	// HOME
 app.controller("homeCtrl", function ($scope, vault, $timeout, $interval, $rootScope) {
@@ -256,11 +332,45 @@ app.run( function($rootScope, $location, $routeParams, vault) {
 
 app.service('admin', function($http, $rootScope, $timeout, $interval) {	
 	
+	var showMsg = function(r, p)
+	{
+		$rootScope.showMsg = {};
+		
+		m = r.message ? r.message : r;
+		switch(m)
+		{			
+			case 'ADMINBADUSER':  $rootScope.showMsg.warn = 'Please enter correct User name!';
+			break;
+			case 'ADMINUSERADDED':  $rootScope.showMsg.success = 'Success! User "' + p + '" added!';
+			break;
+			case 'ADMINUSERNOTADDED':  $rootScope.showMsg.error = 'Error! User "' + p + '" not added!';
+			break;
+			case 'ADMINUSERNOTDELETED':  $rootScope.showMsg.error = 'Error! Users not deleted!';
+			break;
+			case 'ADMINUSERDELETED':  $rootScope.showMsg.success = 'Success! Users deleted!';
+			break;
+			case 'ADMINNOSELECTED':  $rootScope.showMsg.warn = 'Please select at leaset one item!';
+			break;
+			case 'ADMINACCESSCHANGED':  $rootScope.showMsg.success = 'Success! Access changed to "' + (p == '#admin' ? 'Administrator' : 'User') + '"!';
+			break;
+			case 'ADMINACCESSNOTCHANGED':  $rootScope.showMsg.error = 'Error! Access not changed!';
+			break;
+			case 'ADMINCHANGEPASSWORD':  $rootScope.showMsg.success = 'Success! Password changed success for ' + p + ' selected users!';
+			break;
+			case 'ADMINNOCHANGEPASSWORD':  $rootScope.showMsg.error = 'Error! Password change failed!';
+			break;
+			case 'ADMINBADPASSWORD':  $rootScope.showMsg.warn = 'Please enter correct Password!';
+			break;
+			default:  $rootScope.showMsg.error = 'Error! Can`t receive responce from server!';
+			break;
+		}
+	}
+	
 	// SIMPLIFY POST PROCEDURE
-	var HttpPost = function(file, json)
+	var HttpPost = function(query, json)
 	{		
 		return $http({
-			url: 'admin/' + file + '.php?time=' + new Date().getTime(),
+			url: 'admin/admin.php?query=' + query + '&time=' + new Date().getTime(),
 			method: "POST",
 			data: json
 		});
@@ -280,7 +390,7 @@ app.service('admin', function($http, $rootScope, $timeout, $interval) {
 			if(!r.message) {$rootScope.adminDR = r;}							
 		});		 			
 	}
-	
+	// GET SERVICES
 	var adminServices = function()
 	{	
 		httpGet('getServices').success(function(r){
@@ -289,12 +399,12 @@ app.service('admin', function($http, $rootScope, $timeout, $interval) {
 			if(!r.message) {$rootScope.adminServices = r;}							
 		});		 			
 	}
-	
+	// GET USERS
 	var adminUsers = function()
 	{	
 		httpGet('getUsers').success(function(r){
 			$rootScope.adminUsers = [];
-			
+			$rootScope.check1 = {};
 			if(!r.message) {$rootScope.adminUsers = r;}							
 		});		 			
 	}
@@ -312,11 +422,69 @@ app.service('admin', function($http, $rootScope, $timeout, $interval) {
 		}	
 	}
 	
+	// USERS
+	var adminAddUser = function(u){
+		
+		var json = {'user': u};
+		HttpPost('addUser', json).then(function(r){			
+			showMsg(r.data, u);
+			adminUsers();
+		}, 
+		function(r){
+			showMsg('ERROR', u);
+			adminUsers();
+		});	
+	};
+	
+	var adminDeleteUsers = function(u){
+		
+		var json = {'users': u};
+		HttpPost('deleteUsers', json).then(function(r){			
+			showMsg(r.data, u);
+			adminUsers();
+		}, 
+		function(r){
+			showMsg('ERROR', u);
+			adminUsers();
+		});	
+	};
+	
+	var adminChangeAccess = function(u, a){
+		
+		var json = {'users': u, 'access': a};
+		HttpPost('changeAccess', json).then(function(r){			
+			showMsg(r.data, a);
+			adminUsers();			
+		}, 
+		function(r){
+			showMsg('ERROR', u);
+			adminUsers();
+		});	
+	};
+	
+	var adminChangePassword = function(u, pwd){
+		
+		var json = {'users': u, 'pwd': pwd};
+		HttpPost('changePassword', json).then(function(r){			
+			showMsg(r.data, u.length);
+			adminUsers();			
+		}, 
+		function(r){
+			showMsg('ERROR', u);
+			adminUsers();
+		});	
+	};
+	
 	return {
 		sendCmd: sendCmd,
 		adminDR: adminDR,
 		adminServices: adminServices,
-		adminUsers: adminUsers
+		adminUsers: adminUsers,
+		adminAddUser: adminAddUser,
+		showMsg: showMsg,
+		adminDeleteUsers: adminDeleteUsers,
+		adminChangeAccess: adminChangeAccess,
+		adminChangePassword: adminChangePassword
 	};
 });
 

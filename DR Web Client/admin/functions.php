@@ -11,7 +11,70 @@
 	
 		RETURN JSON_ENCODE($JSON);
 	}
+	
+	FUNCTION mysqliInsert($MYSQLI, $TABLE, $DATA)
+	{	
+		$COLS = [];
+		$VALUES = [];
+		FOREACH($DATA AS $KEY => $VALUE)
+		{
+			$COLS[] = $KEY;						
+			$VALUES[] = $VALUE == null ? 'NULL' : "'" .$VALUE . "'";
+		}
+			
+		$QUERY = "INSERT IGNORE INTO " . $TABLE . "(" . IMPLODE(',', $COLS) . ") VALUES(" . IMPLODE(',', $VALUES) . ");";				
+		$RESULT = $MYSQLI->query($QUERY);		
+			
+		$MYSQLI->CLOSE();
 
+		RETURN $RESULT;
+	}
+
+	FUNCTION mysqliDelete($MYSQLI, $TABLE, $DATA, $PARAM)
+	{	
+		$VALUES = [];
+		FOREACH($DATA AS $VALUE)
+		{
+			$VALUES[] = $PARAM . "='" .$VALUE . "'";
+		}
+			
+		$QUERY = "DELETE FROM " . $TABLE . " WHERE " . IMPLODE(' OR ', $VALUES) . ";";						
+		$RESULT = $MYSQLI->query($QUERY);		
+			
+		$MYSQLI->CLOSE();
+
+		RETURN $RESULT;
+	}
+	
+	FUNCTION mysqliUpdate($MYSQLI, $TABLE, $SET, $WHERE)
+	{	
+		$V = [];
+		FOREACH($SET AS $VALUE)
+		{				
+			$KEY = ARRAY_KEYS($VALUE)[0];
+			
+			$V[] = $KEY . "=" . "'" .$VALUE[$KEY] . "'";
+		}
+		
+		$W = [];
+		FOREACH($WHERE AS $VALUE)
+		{				
+			$KEY = ARRAY_KEYS($VALUE)[0];
+			
+			$W[] = $KEY . "=" . "'" .$VALUE[$KEY] . "'";
+		}
+			
+		$QUERY = "UPDATE " . $TABLE . " SET " . IMPLODE(',', $V) . " WHERE " . IMPLODE(' OR ', $W) . ";";						
+		
+		$RESULT = $MYSQLI->query($QUERY);		
+			
+		$MYSQLI->CLOSE();
+
+		RETURN $RESULT;
+	}
+	
+	/////////////////////////////////////////////////////////////////
+	
 	FUNCTION adminDR($MYSQLI)
 	{	
 		$QUERY = "SELECT * FROM dr;";
@@ -32,6 +95,89 @@
 		
 		RETURN mysqliSelect($MYSQLI, $QUERY);
 	}
+	
+	FUNCTION adminAddUser($MYSQLI, $DATA)
+	{		
+		$ERROR = '{"message": "ADMINUSERNOTADDED"}';
+		$SUCCESS = '{"message": "ADMINUSERADDED"}';
+		
+		IF(!ISSET($DATA->user)) RETURN $ERROR;
+		$USER = Strip($DATA->user);
+		
+		$VALUES = ['user' => $USER, 'pwd' => ''];			
+		$RESULT = mysqliInsert($MYSQLI, 'users', $VALUES);
+		
+		IF(!$RESULT) RETURN $ERROR;
+		RETURN $SUCCESS;
+	}
+	
+	FUNCTION adminDeleteUsers($MYSQLI, $DATA)
+	{		
+		$ERROR = '{"message": "ADMINUSERNOTDELETED"}';
+		$SUCCESS = '{"message": "ADMINUSERDELETED"}';
+		
+		IF(!ISSET($DATA->users)) RETURN $ERROR;
+		$USERS =[];
+		
+		FOREACH($DATA->users AS $VALUE)
+		{
+			$USERS[] = Strip($VALUE);			
+		}
+					
+		$RESULT = mysqliDelete($MYSQLI, 'users', $USERS, 'user');
+		
+		IF(!$RESULT) RETURN $ERROR;
+		RETURN $SUCCESS;
+	}
+	
+	FUNCTION adminChangeAccess($MYSQLI, $DATA)
+	{
+		$ERROR = '{"message": "ADMINACCESSNOTCHANGED"}';
+		$SUCCESS = '{"message": "ADMINACCESSCHANGED"}';
+		
+		IF(!ISSET($DATA->users) OR !ISSET($DATA->access)) RETURN $ERROR;
+				
+		$ACCESS = 0;		
+		
+		IF($DATA->access == '#admin') $ACCESS = 1;
+				
+		$WHRE =[];
+		$SET = [];
+		
+		FOREACH($DATA->users AS $VALUE){
+						
+			$SET[] = ['rights' => $ACCESS];
+			$WHERE[] = ['user' => Strip($VALUE)];
+		}
+				
+		$RESULT = mysqliUpdate($MYSQLI, 'users', $SET, $WHERE);
+		
+		IF(!$RESULT) RETURN $ERROR;
+		RETURN $SUCCESS;		
+	}
+	
+	FUNCTION adminChangePassword($MYSQLI, $DATA)
+	{
+		$ERROR = '{"message": "ADMINNOCHANGEPASSWORD"}';
+		$SUCCESS = '{"message": "ADMINCHANGEPASSWORD"}';
+		
+		IF(!ISSET($DATA->users) OR !ISSET($DATA->pwd)) RETURN $ERROR;
+		
+		$WHRE =[];
+		$SET = [];
+		
+		FOREACH($DATA->users AS $VALUE){
+						
+			$SET[] = ['pwd' => $DATA->pwd == '' ? '' : MD5($DATA->pwd)];
+			$WHERE[] = ['user' => Strip($VALUE)];
+		}
+		
+		$RESULT = mysqliUpdate($MYSQLI, 'users', $SET, $WHERE);
+		
+		IF(!$RESULT) RETURN $ERROR;
+		RETURN $SUCCESS;
+	}
+	
 	
 	/*
 	FUNCTION getSrv($SERVICES)

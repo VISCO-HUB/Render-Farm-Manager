@@ -156,8 +156,7 @@
 			RETURN FALSE;
 		}
 				
-		$QUERY = 'INSERT INTO users (user, pwd , ip) VALUES ("' . $USER . '", "' . $PW . '", "' . $_SERVER['REMOTE_ADDR'] . '");';
-		
+		$QUERY = 'UPDATE users SET pwd="' . $PW . '", ip="' . $_SERVER['REMOTE_ADDR'] . '" WHERE user="' . $USER . '";';
 		$RESULT = $MYSQLI->query($QUERY);
 				
 		$MYSQLI->CLOSE();		
