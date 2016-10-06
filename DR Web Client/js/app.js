@@ -18,17 +18,6 @@
 
 */
 
-/*
-	TODO:
-	
-	Админка:
-	Добавление, удаление сервисов
-	Управление пользователями в системе
-	Создание глобального статуса - вкл./выкл. сервис
-	Перезагрузска всех нод
-	Выключение сервисов на всех нодах
-	Mail notifications
-*/
 
 /* GLOBAL FUNCTIONS */
 
@@ -80,14 +69,24 @@ app.controller("aboutCtrl", function($scope){
 app.controller("adminCtrl", function($scope, $rootScope, admin){
 	$scope.adminSection = 'global';
 	$rootScope.adminDR = [];
-	$rootScope.adminServices = [];
-	$rootScope.checkAdminDR = [];
+	$rootScope.Global = {};
+	$rootScope.adminServices = [];	
 	$rootScope.adminUsers = [];
+	$rootScope.checkAdminDR = [];
 	$rootScope.checkAdminUsers = [];
+	$rootScope.checkAdminServices = [];
+
 	
+	
+	admin.adminGlobal();
 	admin.adminDR();
 	admin.adminServices();
 	admin.adminUsers();
+	
+	$scope.getAdminGlobal = function(){admin.adminGlobal();};
+	$scope.getAdminDR = function(){admin.adminDR();};
+	$scope.getAdminServices = function(){admin.adminServices();};
+	$scope.getAdminUsers = function(){admin.adminUsers();};
 	
 	$scope.installedServices = function(s){	
 		var out = '';
@@ -98,6 +97,10 @@ app.controller("adminCtrl", function($scope, $rootScope, admin){
 		});
 		
 		return out.slice(0, -2);
+	}
+	
+	$scope.isNumeric = function(n) {
+		return !isNaN(parseFloat(n)) && isFinite(n);
 	}
 	
 	$scope.deleteMsg = function()
@@ -148,7 +151,7 @@ app.controller("adminCtrl", function($scope, $rootScope, admin){
 		
 		admin.adminChangeAccess(u, a);
 	};
-	
+		
 	$scope.adminChangePassword = function(a) {
 		var u = $rootScope.checkAdminUsers;
 		var pwd = '';
@@ -164,6 +167,158 @@ app.controller("adminCtrl", function($scope, $rootScope, admin){
 		admin.adminChangePassword(u, pwd);
 	};
 	
+	// SERVICES
+	
+	$scope.adminServiceAdd = function(){
+		serviceName = prompt("Please enter Service Name", "");
+		
+			
+		if(!serviceName || !serviceName.length) {			
+			admin.showMsg('ADMINBADSERVICENAME');
+			
+			return false;
+		}
+		
+		admin.adminServiceAdd(serviceName);
+	}
+	
+	$scope.adminServiceDelete = function(){
+		var s = $rootScope.checkAdminServices;
+		
+		if(!s.length){
+			admin.showMsg('ADMINNOSELECTED');
+			return false;
+		}
+		
+		if(!confirm('Do you really want to delete ' + s.length + ' selected services?')){
+			return false;
+		}
+		
+		admin.adminServiceDelete(s);
+	};
+	
+	$scope.adminServiceDisable = function(d){
+		var s = $rootScope.checkAdminServices;
+		
+		if(!s.length){
+			admin.showMsg('ADMINNOSELECTED');
+			return false;
+		}
+		
+		if(!confirm('Do you really want to change status for ' + s.length + ' selected services?')){
+			return false;
+		}
+		
+		admin.adminServiceDisable(s, d);
+	};
+	
+	// GLOBAL 
+	
+	$scope.adminGlobalChangeParam = function(n, v) {
+		admin.adminGlobalChangeParam(n, v);
+	};
+	
+	$scope.adminGlobalChangeMessage = function() {
+		var m = prompt("Please enter Offline Message", "");
+			
+		if(!m || !m.length) {			
+			admin.showMsg('ADMINGLOBALBADINPUT');
+			
+			return false;
+		}
+		
+		admin.adminGlobalChangeParam('message', m);
+	};
+	
+	$scope.adminGlobalChangeIdle = function() {
+		var m = prompt("Please enter Idle Time", "");
+			
+		if(!m || !m.length || !$scope.isNumeric(m)) {			
+			admin.showMsg('ADMINGLOBALBADINPUT');
+			
+			return false;
+		}
+		
+		admin.adminGlobalChangeParam('idle', m);
+	};
+	
+	// NODE
+	
+	
+	$scope.adminNodesDisable = function(d){
+		var s = $rootScope.checkAdminDR;
+		
+		if(!s.length){
+			admin.showMsg('ADMINNOSELECTED');
+			return false;
+		}
+		
+		if(!confirm('Do you really want to change status for ' + s.length + ' selected nodes?')){
+			return false;
+		}
+		
+		admin.adminNodesDisable(s, d);
+	}
+	
+	$scope.adminNodeDelete = function(){
+		var s = $rootScope.checkAdminDR;
+		
+		if(!s.length){
+			admin.showMsg('ADMINNOSELECTED');
+			return false;
+		}
+		
+		if(!confirm('Do you really want to delete ' + s.length + ' selected nodes?')){
+			return false;
+		}
+		
+		admin.adminNodeDelete(s);
+	};
+	
+	$scope.sendCmd = function(cmd){
+		var s = $rootScope.checkAdminDR;
+		
+		if(!s.length){
+			admin.showMsg('ADMINNOSELECTED');
+			return false;
+		}
+		
+		admin.sendCmd(s, cmd);
+	}
+	
+	
+	$scope.adminRunService = function(name){
+		
+		if(!confirm('Do you really want to run ' + name + ' on selected nodes?')){
+			return false;
+		}
+		
+		admin.showMsg('ADMINSTARTSERVICE', name);
+		
+		$scope.sendCmd('STARTSERVICE:' + name);
+	}
+	
+	$scope.adminStopService = function(){
+		
+		if(!confirm('Do you really want to stop all services on selected nodes?')){
+			return false;
+		}
+		
+		admin.showMsg('ADMINSTOPSERVICE');
+		
+		$scope.sendCmd('STOPSERVICES');
+	}
+	
+	$scope.adminRebootNodes = function(){
+		
+		if(!confirm('Do you really want to reboot selected nodes?')){
+			return false;
+		}
+		
+		admin.showMsg('ADMINREBOOT');
+		
+		$scope.sendCmd('REBOOT');
+	}
 	
 	// CHECKS
 	$rootScope.check1 = {};
@@ -176,9 +331,32 @@ app.controller("adminCtrl", function($scope, $rootScope, admin){
 		  }
 		});
 	  });
+	$rootScope.check2 = {};
+	$scope.$watchCollection('check2', function () {
+		$rootScope.checkAdminServices = [];
+		
+		angular.forEach($rootScope.check2, function (value, key) {
+		  if (value) {
+			$rootScope.checkAdminServices.push(key);			
+		  }
+		});
+	  });
+	  
+	$rootScope.check3 = {};
+	$scope.$watchCollection('check3', function () {
+		$rootScope.checkAdminDR = [];
+		
+		angular.forEach($rootScope.check3, function (value, key) {
+		  if (value) {
+			$rootScope.checkAdminDR.push(key);			
+		  }
+		});
+	  });
 });
 	// HOME
-app.controller("homeCtrl", function ($scope, vault, $timeout, $interval, $rootScope) {
+app.controller("homeCtrl", function ($scope, vault, admin, $timeout, $interval, $rootScope) {
+	$rootScope.Global = {};
+	admin.adminGlobal();
 	// sendChallange 
 	$rootScope.firstLoad = 0;
 	vault.getServices();
@@ -206,35 +384,35 @@ app.controller("homeCtrl", function ($scope, vault, $timeout, $interval, $rootSc
 			}
 		});
 	}
-	
+		
 	$scope.getLastNodes = function(){
 		$rootScope.checkModel = {};
 		vault.getLastNodes();
-	}
+	};
 	
 	$scope.startService = function(name){
 		vault.startService(name);
-	}
+	};
 	
 	$scope.getNodes = function()
 	{
 		vault.getNodes();
-	}
+	};
 		
 	$scope.deleteMsg = function()
 	{
 		$rootScope.showMsg = {};
-	}
+	};
 	
 	$scope.dropNodes = function()
 	{		
 		vault.dropNodes();	
-	}
+	};
 	
 	$scope.isReserved = function(user)
 	{
 		return user != null && $rootScope.userInfo && user != $rootScope.userInfo.user;
-	}
+	};
 	
 	$scope.orderNodes = 'name';
 	$scope.reverse = false;
@@ -242,7 +420,7 @@ app.controller("homeCtrl", function ($scope, vault, $timeout, $interval, $rootSc
 	$scope.orderByParam = function(x) {
 		$scope.reverse = !$scope.reverse;
 		$scope.orderNodes = x;
-	}
+	};
 		
 	$rootScope.startingSpawners = false;	
 	$rootScope.currentService = '';		
@@ -255,7 +433,7 @@ app.controller("homeCtrl", function ($scope, vault, $timeout, $interval, $rootSc
 			$rootScope.currentService = x;
 			vault.startService(x);
 		}
-	}
+	};
 	$scope.runService();
 	
 	$scope.rebootNodes = function(){
@@ -263,7 +441,7 @@ app.controller("homeCtrl", function ($scope, vault, $timeout, $interval, $rootSc
 		{
 			vault.rebootNodes();
 		}
-	}
+	};
 	
 	//	GET RUNNINI SERVICES
 	/*$scope.getUsedServices = function(services){					
@@ -286,9 +464,12 @@ app.controller("homeCtrl", function ($scope, vault, $timeout, $interval, $rootSc
 	$rootScope.checkModel = {};
 	$scope.$watchCollection('checkModel', function () {
 		$rootScope.checkResults = [];
+		$rootScope.checkResultsNames = [];
 		angular.forEach($rootScope.checkModel, function (value, key) {
 		  if (value) {
 			$rootScope.checkResults.push(key);
+			//$rootScope.checkResults.push($rootScope.dr[]);
+			
 		  }
 		});
 	  });
@@ -361,7 +542,33 @@ app.service('admin', function($http, $rootScope, $timeout, $interval) {
 			break;
 			case 'ADMINBADPASSWORD':  $rootScope.showMsg.warn = 'Please enter correct Password!';
 			break;
-			default:  $rootScope.showMsg.error = 'Error! Can`t receive responce from server!';
+			case 'ADMINBADSERVICENAME':  $rootScope.showMsg.warn = 'Please enter correct Service Name!';
+			break;
+			case 'ADMINSERVICEADDED':  $rootScope.showMsg.success = 'Success! Service "' + p + '" added!';
+			break;
+			case 'ADMINSERVICENOTADDED':  $rootScope.showMsg.error = 'Error! Service "' + p + '" not added!';
+			break;
+			case 'ADMINDELETEBAD':  $rootScope.showMsg.error = 'Error! Items not deleted!';
+			break;
+			case 'ADMINDELETEOK':  $rootScope.showMsg.success = 'Success! Items deleted!';
+			break;			
+			case 'ADMINGLOBALOK':  $rootScope.showMsg.success = 'Success! Parameter changed!';
+			break;
+			case 'ADMINGLOBALBAD':  $rootScope.showMsg.error = 'Error! Parameter not chaged!';
+			break;
+			case 'ADMINGLOBALBADINPUT':  $rootScope.showMsg.warn = 'Please enter correct value!';
+			break;
+			case 'ADMINSTATUSBAD':  $rootScope.showMsg.error = 'Error! Status not chaged!';
+			break;	
+			case 'ADMINSTATUSOK':  $rootScope.showMsg.success = 'Success! Status changed to "' + (p ? 'Disable' : 'Enable') + '"!';
+			break;
+			case 'ADMINSTARTSERVICE':  $rootScope.showMsg.warn = 'Try to force start "' + p + '" on selected nodes!';
+			break;	
+			case 'ADMINSTOPSERVICE':  $rootScope.showMsg.warn = 'Try to force stop all services on selected nodes!';
+			break;	
+			case 'ADMINREBOOT':  $rootScope.showMsg.warn = 'Try to force reboot selected nodes!';
+			break;			
+			default: $rootScope.showMsg.error = 'Error! Can`t receive responce from server!';
 			break;
 		}
 	}
@@ -381,11 +588,25 @@ app.service('admin', function($http, $rootScope, $timeout, $interval) {
 		return $http.get('admin/admin.php?query=' + query + '&time=' + new Date().getTime());
 	}
 	
+	// GET GLOBAL
+	
+	var adminGlobal = function() {
+		httpGet('getGlobal').success(function(r){
+			$rootScope.Global = {};
+			if(!r.message) {
+				angular.forEach(r, function(value, key){					
+					$rootScope.Global[value.name] = value.value;	
+				});				
+			}							
+		});				
+	}
+	
 	// GET DR
 	var adminDR = function()
 	{	
 		httpGet('getDR').success(function(r){
 			$rootScope.adminDR = [];
+			$rootScope.check3 = {};
 			
 			if(!r.message) {$rootScope.adminDR = r;}							
 		});		 			
@@ -395,6 +616,7 @@ app.service('admin', function($http, $rootScope, $timeout, $interval) {
 	{	
 		httpGet('getServices').success(function(r){
 			$rootScope.adminServices = [];
+			$rootScope.check2 = {};
 			
 			if(!r.message) {$rootScope.adminServices = r;}							
 		});		 			
@@ -475,7 +697,123 @@ app.service('admin', function($http, $rootScope, $timeout, $interval) {
 		});	
 	};
 	
+	// SERVICES
+	
+	var adminServiceAdd = function(s){
+		var json = {'name': s};
+		HttpPost('serviceAdd', json).then(function(r){			
+			showMsg(r.data, s);
+			adminServices();			
+		}, 
+		function(r){
+			showMsg('ERROR', u);
+			adminServices();
+		});
+	};
+	
+	var adminServiceDelete = function(s){
+		var json = {'names': s};
+		HttpPost('serviceDelete', json).then(function(r){			
+			showMsg(r.data, s.length);
+			
+			adminServices();			
+		}, 
+		function(r){
+			showMsg('ERROR');
+			adminServices();
+		});
+	};
+	
+	var adminServiceDisable = function(s, d) {
+		var json = {'names': s, 'status': d};
+		HttpPost('serviceDisable', json).then(function(r){			
+			showMsg(r.data, d);
+			
+			adminServices();			
+		}, 
+		function(r){
+			showMsg('ERROR');
+			adminServices();
+		});
+	}
+	
+	// GLOBAL
+	
+	var adminGlobalChangeParam = function(n, v){
+		var json = {'name': n, 'value': v};
+		HttpPost('globalChangeParam', json).then(function(r){			
+			showMsg(r.data);			
+			adminGlobal();			
+		}, 
+		function(r){
+			showMsg('ERROR');
+			adminGlobal();
+		});		
+	};
+	
+	var adminSendEmail = function(c, s, n){
+		var json = {'content': c, 'subject': s, 'notify': n};
+		HttpPost('sendEmail', json).then(function(r){
+			adminGlobal();			
+		}, 
+		function(r){
+			showMsg('ERROR');
+			adminGlobal();
+		});		
+	};
+	
+	// NODE
+	
+	var adminNodesDisable = function(s, d) {
+		var json = {'ip': s, 'status': d};
+		HttpPost('nodesDisable', json).then(function(r){			
+			showMsg(r.data, d);
+			
+			adminDR();			
+		}, 
+		function(r){
+			showMsg('ERROR');
+			adminDR();
+		});
+	}
+	
+	var adminNodeDelete = function(s){
+		var json = {'ip': s};
+		HttpPost('nodeDelete', json).then(function(r){			
+			showMsg(r.data, s.length);
+						
+			adminDR();			
+		}, 
+		function(r){
+			showMsg('ERROR');
+			adminDR();
+		});
+	};
+	
+	// WORK WITH SOCKET
+	var socket = function(ip, cmd)
+	{
+		var json = {'ip': ip, 'cmd': cmd};
+		
+		HttpPost('sendCmd', json).then(function(r){							
+			
+		}, 
+		function(r){			
+		});		
+	}
+	// SEND COMMAND TO ALL SERVERS	
+	var sendCmd = function(s, cmd)
+	{			
+		for(var i = 0; i < s.length; i++)  
+		{			
+			var ip = s[i];
+			
+			socket(ip, cmd);				
+		}	
+	}
+		
 	return {
+		adminGlobal: adminGlobal,
 		sendCmd: sendCmd,
 		adminDR: adminDR,
 		adminServices: adminServices,
@@ -484,12 +822,20 @@ app.service('admin', function($http, $rootScope, $timeout, $interval) {
 		showMsg: showMsg,
 		adminDeleteUsers: adminDeleteUsers,
 		adminChangeAccess: adminChangeAccess,
-		adminChangePassword: adminChangePassword
+		adminChangePassword: adminChangePassword,
+		adminServiceAdd: adminServiceAdd,
+		adminServiceDelete: adminServiceDelete,
+		adminServiceDisable: adminServiceDisable,
+		adminGlobalChangeParam: adminGlobalChangeParam,
+		adminSendEmail: adminSendEmail,
+		adminNodesDisable: adminNodesDisable,
+		adminNodeDelete: adminNodeDelete,
+		sendCmd: sendCmd
 	};
 });
 
 
-app.service('vault', function($http, $rootScope, $timeout, $interval) {
+app.service('vault', function($http, $rootScope, $timeout, $interval, admin) {
 	// MESSAGES
 	var showMsg = function(r, p)
 	{
@@ -572,13 +918,51 @@ app.service('vault', function($http, $rootScope, $timeout, $interval) {
 			$rootScope.services = {};
 		});	
 	}
+		
+	var sendMail = function(r){
+		var n = $rootScope.Global.notify;
+		var isSend = $rootScope.Global.email;
+		var c = '';		
+		var s = 'Render Farm Manager';
+		var u = $rootScope.userInfo.user;
+		var nodes = $rootScope.reservedDrNames.join('\r\n');
+		var free = $rootScope.freeNodes.length;
+		var old = $rootScope.oldNodes;
+				
+		var m = r.message ? r.message : r;
+		
+		switch(m){
+			case 'NODESDROPPED': 
+				c = 'User "' + u + '" drop nodes:\r\n\r\n';
+				c += old;
+				c += '\r\n\r\nNow free ' + free + ' nodes.';
+				s += ': Nodes Dropped';
+			break;
+			case 'NODESRESERVED':
+				c = 'User "' + u + '" reserved nodes:\r\n\r\n';
+				c += 'Job Name: ' + $rootScope.jobName + '\r\n'
+				c += nodes;
+				c += '\r\n\r\nNow free ' + free + ' nodes.';
+				s += ': Nodes Dropped';
+			break;
+		}
+			
+		if(isSend == 1 && c != ''){			
+			admin.adminSendEmail(c, s, n);
+		}
+	}
+	
 	// GET DR
-	var getDR = function()
+	var getDR = function(mailType)
 	{	
+		$rootScope.oldNodes = $rootScope.reservedDrNames;
+	
 		httpGet('getDR').success(function(r){
 			$rootScope.dr = r;
 			$rootScope.reservedDr = [];
+			$rootScope.reservedDrNames = [];
 			$rootScope.otherUsers = [];
+			$rootScope.freeNodes = [];
 			
 			var runninSrv = [];
 			
@@ -586,17 +970,23 @@ app.service('vault', function($http, $rootScope, $timeout, $interval) {
 				if(value.user != null) {$rootScope.checkModel[value.ip] = false;}	
 				
 				if(value.user != '' && value.user != null && $rootScope.otherUsers.indexOf(value.user) == -1) {$rootScope.otherUsers.push(value.user);}
+				if((value.user == '' || value.user == null) && value.status == 0) {$rootScope.freeNodes.push(value.name);}
 				
 				if($rootScope.userInfo && value.user === $rootScope.userInfo.user)
 				{
 					$rootScope.checkModel[value.ip] = true;
 					$rootScope.reservedDr.push(value);
+					$rootScope.reservedDrNames.push(value.name);
 					
 					if(value.services == $rootScope.currentService) {runninSrv.push(true)}			
 				}
 			});			
 			$rootScope.firstLoad++;
 			$rootScope.startingSpawners = $rootScope.reservedDr.length != runninSrv.length && $rootScope.currentService.length;	
+			
+			// SEND EMAIL
+			
+			if(mailType) {sendMail(mailType);}
 		});		 			
 	}
 	
@@ -693,6 +1083,7 @@ app.service('vault', function($http, $rootScope, $timeout, $interval) {
 		
 	}
 	
+	
 	var getNodes = function()
 	{	
 		var nodes = $rootScope.checkResults;
@@ -715,29 +1106,37 @@ app.service('vault', function($http, $rootScope, $timeout, $interval) {
 			
 			return false;
 		}
+		
+		$rootScope.jobName = jobName;
 			
 		var json = {};
 		json.nodes = nodes;
 		json.job = jobName;
 		
 		HttpPost('getNodes', json).then(function(r){
-			showMsg(r.data);				
-			getDR();			
+			showMsg(r.data);										
+			getDR(r.data);			
 		}, 
 		function(r){			
 			console.log(r);
 		});	
 	}
+		
 	
 	var dropNodes = function()
-	{			
+	{		
+		var isReserved = $rootScope.reservedDrNames.length > 0;
 		httpGet('dropNodes').success(function(r){
-			showMsg(r);
+			
 			$rootScope.currentService = '';
 			$rootScope.checkModel = {};	
-			//getDR();
+			
+			if(isReserved){
+				showMsg(r);
+				
+				getDR(r);
+			}					
 		});	
-		//sendCmd('DROP');
 	}
 	
 	var getLastNodes = function()
@@ -797,4 +1196,5 @@ app.service('vault', function($http, $rootScope, $timeout, $interval) {
   };
 
 });
+
 

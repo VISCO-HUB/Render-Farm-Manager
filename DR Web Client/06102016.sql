@@ -41,8 +41,32 @@ CREATE TABLE `dr` (
 
 LOCK TABLES `dr` WRITE;
 /*!40000 ALTER TABLE `dr` DISABLE KEYS */;
-INSERT INTO `dr` VALUES ('lviv-render-001',1,'9','VRaySpawner 2014=1;VRaySpawner 2016=1;DR Corona=notfound;=notfound;','192.168.0.51',NULL,'1','2016-09-30 12:30:49'),('lviv-render-002',0,'1','VRaySpawner 2014=1;VRaySpawner 2016=1;DR Corona=notfound;=notfound;','192.168.0.52',NULL,'1','2016-09-30 12:29:18'),('lviv-render-003',0,'0','VRaySpawner 2014=1;VRaySpawner 2016=1;DR Corona=notfound;=notfound;','192.168.0.53',NULL,'1','2016-09-30 12:29:21'),('lviv-render-004',0,'0','VRaySpawner 2014=1;VRaySpawner 2016=1;DR Corona=notfound;=notfound;','192.168.0.54',NULL,'1','2016-09-30 12:29:23'),('lviv-render-005',0,'0','VRaySpawner 2014=1;VRaySpawner 2016=1;DR Corona=notfound;=notfound;','192.168.0.55',NULL,'1','2016-09-30 12:29:24'),('lviv-render-006',0,'0','VRaySpawner 2014=1;VRaySpawner 2016=1;DR Corona=notfound;=notfound;','192.168.0.56',NULL,'1','2016-09-30 12:29:27'),('lviv-render-007',0,'4','VRaySpawner 2014=1;VRaySpawner 2016=1;DR Corona=notfound;=notfound;','192.168.0.57',NULL,'1','2016-09-30 12:29:33'),('lviv-render-008',0,'1','VRaySpawner 2014=1;VRaySpawner 2016=1;DR Corona=notfound;=notfound;','192.168.0.58',NULL,'1','2016-09-30 12:29:37'),('lviv-render-009',0,'0','VRaySpawner 2014=1;VRaySpawner 2016=1;DR Corona=notfound;=notfound;','192.168.0.59',NULL,'1','2016-09-30 12:29:39'),('lviv-render-010',0,'0','VRaySpawner 2014=1;VRaySpawner 2016=1;DR Corona=notfound;=notfound;','192.168.0.60',NULL,'1','2016-09-30 12:29:43'),('max3d026',0,'8','VRaySpawner 2014=notfound;VRaySpawner 2016=notfound;=notfound;','192.168.0.126',' ','1','2016-09-29 11:05:08');
+INSERT INTO `dr` VALUES ('max3d026',0,'30','VRaySpawner 2014=notfound;VRaySpawner 2016=notfound;DR Corona=notfound;=notfound;','192.168.0.126',NULL,NULL,'2016-10-06 13:29:59');
 /*!40000 ALTER TABLE `dr` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `global`
+--
+
+DROP TABLE IF EXISTS `global`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `global` (
+  `name` varchar(45) NOT NULL,
+  `value` varchar(255) DEFAULT NULL,
+  PRIMARY KEY (`name`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `global`
+--
+
+LOCK TABLES `global` WRITE;
+/*!40000 ALTER TABLE `global` DISABLE KEYS */;
+INSERT INTO `global` VALUES ('email','1'),('idle','120'),('message','Render Farm Manager under maintenance. Contact with administrator...'),('notify','2'),('status','1');
+/*!40000 ALTER TABLE `global` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
@@ -57,7 +81,7 @@ CREATE TABLE `services` (
   `name` varchar(255) DEFAULT NULL,
   `status` int(11) NOT NULL DEFAULT '0',
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -66,7 +90,7 @@ CREATE TABLE `services` (
 
 LOCK TABLES `services` WRITE;
 /*!40000 ALTER TABLE `services` DISABLE KEYS */;
-INSERT INTO `services` VALUES (1,'VRaySpawner 2014',0),(2,'VRaySpawner 2016',0),(3,'DR Corona',0);
+INSERT INTO `services` VALUES (1,'VRaySpawner 2014',0),(2,'VRaySpawner 2016',0),(6,'DR Corona',1);
 /*!40000 ALTER TABLE `services` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -93,7 +117,7 @@ CREATE TABLE `users` (
 
 LOCK TABLES `users` WRITE;
 /*!40000 ALTER TABLE `users` DISABLE KEYS */;
-INSERT INTO `users` VALUES ('e.astafiev','','',NULL,1),('i.bodak','','',NULL,0),('o.labintsev','','',NULL,0),('v.lukyanenko','193.84.22.46','c4ca4238a0b923820dcc509a6f75849b','192.168.0.52|192.168.0.53|192.168.0.54|192.168.0.55|192.168.0.56|192.168.0.51',1),('v.zabolotnyi','','',NULL,0);
+INSERT INTO `users` VALUES ('e.astafiev','','',NULL,0),('i.bodak','','',NULL,0),('o.labintsev','','',NULL,0),('v.lukyanenko','193.84.22.46','c4ca4238a0b923820dcc509a6f75849b','192.168.0.126',1),('v.zabolotnyi','','',NULL,0);
 /*!40000 ALTER TABLE `users` ENABLE KEYS */;
 UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
@@ -106,4 +130,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2016-10-03 17:08:06
+-- Dump completed on 2016-10-06 13:32:34

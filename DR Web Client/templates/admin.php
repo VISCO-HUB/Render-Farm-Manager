@@ -21,10 +21,10 @@
 
 <div class="col-sm-3 col-md-3 col-lg-3"> <br>
 	<div class="list-group"> 
-		<a href="" class="list-group-item" ng-class="{active: adminSection=='global'}" ng-click="adminSection='global'">Global</a> 
-		<a href="" class="list-group-item" ng-class="{active: adminSection=='users'}" ng-click="adminSection='users'">Users <span class="badge" style="border-radius: 10px !important">{{adminUsers.length - 1}}</span></a> 
-		<a href="" class="list-group-item" ng-class="{active: adminSection=='services'}" ng-click="adminSection='services'">Services <span class="badge" style="border-radius: 10px !important">{{adminServices.length}}</span></a> 
-		<a href="" class="list-group-item" ng-class="{active: adminSection=='nodes'}" ng-click="adminSection='nodes'">Nodes <span class="badge" style="border-radius: 10px !important"> {{adminDR.length}}</span></a> 
+		<a href="" class="list-group-item" ng-class="{active: adminSection=='global'}" ng-click="adminSection='global';getAdminGlobal()">Global</a> 
+		<a href="" class="list-group-item" ng-class="{active: adminSection=='users'}" ng-click="adminSection='users';getAdminUsers()">Users <span class="badge" style="border-radius: 10px !important">{{adminUsers.length - 1}}</span></a> 
+		<a href="" class="list-group-item" ng-class="{active: adminSection=='services'}" ng-click="adminSection='services';getAdminServices()">Services <span class="badge" style="border-radius: 10px !important">{{adminServices.length}}</span></a> 
+		<a href="" class="list-group-item" ng-class="{active: adminSection=='nodes'}" ng-click="adminSection='nodes';getAdminDR()">Nodes <span class="badge" style="border-radius: 10px !important"> {{adminDR.length}}</span></a> 
 	</div>
 </div>
 <div class="col-sm-9 col-md-9 col-lg-9"> 
@@ -33,30 +33,40 @@
 		<h1>Global</h1>
 		<h2><small>Global status:</small></h2>
 		<div class="btn-group" data-toggle="buttons">
-			<button type="button" class="btn btn-success" ng-click="">&nbsp;ON&nbsp;</button>
-			<button type="button" class="btn btn-default" ng-click="">OFF</button>
+			<button type="button" class="btn" ng-class="Global.status == 1 ? 'btn-success' : 'btn-default'" ng-click="adminGlobalChangeParam('status', '1')">&nbsp;ON&nbsp;</button>
+			<button type="button" class="btn" ng-class="Global.status == 0 ? 'btn-danger' : 'btn-default'" ng-click="adminGlobalChangeParam('status', '0')">OFF</button>
 		</div>
 		<hr>
 		<h2><small>Offline Message:</small></h2>
 		<div class="form-group">
-			<input type="text" class="form-control" disabled placeholder="Render Farm Manager under maintenance!">
+			<input type="text" class="form-control" disabled placeholder="{{Global.message}}">
 		</div>
-		<button type="submit" class="btn btn-primary">Change</button>
+		<button type="submit" class="btn btn-primary" ng-click="adminGlobalChangeMessage()">Change</button>
+		<hr>
+		<h2><small>Idle Time:</small></h2>
+		<div>
+			Time in minutes for drop nodes if user not render (default: 120):
+			<br><br>
+		</div>
+		<div class="form-group">
+			<input type="text" class="form-control" disabled placeholder="{{Global.idle}}" style="width: 100px;">
+		</div>
+		<button type="submit" class="btn btn-primary" ng-click="adminGlobalChangeIdle()">Change</button>
 		<hr>
 		<h2><small>E-Mail Notifications:</small></h2>
 		<div class="btn-group" data-toggle="buttons">
-			<button type="button" class="btn btn-success" ng-click="">&nbsp;ON&nbsp;</button>
-			<button type="button" class="btn btn-default" ng-click="">OFF</button>
+			<button type="button" class="btn" ng-class="Global.email == 1 ? 'btn-success' : 'btn-default'" ng-click="adminGlobalChangeParam('email', '1')">&nbsp;ON&nbsp;</button>
+			<button type="button" class="btn" ng-class="Global.email == 0 ? 'btn-danger' : 'btn-default'" ng-click="adminGlobalChangeParam('email', '0')">OFF</button>
 		</div>
 		<h2><small>Who To Notify:</small></h2>
 		<div class="btn-group">
-			<button type="button" class="btn btn-info">All</button>
+			<button type="button" class="btn btn-info">{{Global.notify == 0 ? 'All' : (Global.notify == 2 ? 'Administrators' : 'Users')}}</button>
 			<button type="button" class="btn btn-info dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"> <span class="caret"></span> <span class="sr-only">Toggle Dropdown</span> </button>
 			<ul class="dropdown-menu">
-				<li><a href="">All</a></li>
+				<li><a href="" ng-click="adminGlobalChangeParam('notify', '0')">All</a></li>
 				<li role="separator" class="divider"></li>
-				<li><a href="">Users Only</a></li>
-				<li><a href="">Administrators Only</a></li>
+				<li><a href="" ng-click="adminGlobalChangeParam('notify', '1')">Users Only</a></li>
+				<li><a href="" ng-click="adminGlobalChangeParam('notify', '2')">Administrators Only</a></li>
 			</ul>
 		</div>
 	</div>
@@ -105,22 +115,22 @@
 					<th>Service</th>
 					<th>Status</th>
 				</tr>
-				<tr ng-repeat="service in adminServices"  ng-model="checkAdminServices[service.name]" uib-btn-checkbox>
-					<td><span class="glyphicon" ng-class="checkAdminServices[service.name] ? 'glyphicon-check': 'glyphicon-unchecked'" aria-hidden="true"></span></td>
+				<tr ng-repeat="service in adminServices"  ng-model="check2[service.name]" uib-btn-checkbox>
+					<td><span class="glyphicon" ng-class="check2[service.name] ? 'glyphicon-check': 'glyphicon-unchecked'" aria-hidden="true"></span></td>
 					<td > {{service.name}} </td>
 					<td style="font-size: 17px;"><span ng-show="service.status==1" class="label label-danger">Disabled</span> <span ng-show="service.status==0" class="label label-success">Enabled</span></td>
 				</tr>
 			</table>
 		</div>
-		<button type="button" class="btn btn-success" ng-click="adminAddService()">Add</button>
-		<button type="button" class="btn btn-danger" ng-click="adminAddService()">Delete</button>
+		<button type="button" class="btn btn-success" ng-click="adminServiceAdd()">Add</button>
+		<button type="button" class="btn btn-danger" ng-click="adminServiceDelete()">Delete</button>
 		<div class="btn-group dropup">
 			<button type="button" class="btn btn-warning" data-toggle="dropdown">Status</button>
 			<button type="button" class="btn btn-warning dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"> <span class="caret"></span> <span class="sr-only">Toggle Dropdown</span> </button>
 			<ul class="dropdown-menu" aria-labelledby="dropdownMenu1">
-				<li><a href=""><span class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span> Enable Services</a></li>
+				<li><a href="" ng-click="adminServiceDisable(false)"><span class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span> Enable Services</a></li>
 				<li class="divider"></li>
-				<li><a href=""><span class="glyphicon glyphicon-ban-circle text-danger" aria-hidden="true"></span> Disable Services</a></li>
+				<li><a href="" ng-click="adminServiceDisable(true)"><span class="glyphicon glyphicon-ban-circle text-danger" aria-hidden="true"></span> Disable Services</a></li>
 			</ul>
 		</div>
 	</div>
@@ -140,8 +150,8 @@
 					<th>Installed Services</th>
 					<th>Status</th>
 				</tr>
-				<tr ng-repeat="node in adminDR"  ng-model="checkAdminDR[node.ip]" uib-btn-checkbox>
-					<td><span class="glyphicon" ng-class="checkAdminDR[node.ip] ? 'glyphicon-check': 'glyphicon-unchecked'" aria-hidden="true"></span></td>
+				<tr ng-repeat="node in adminDR"  ng-model="check3[node.ip]" uib-btn-checkbox>
+					<td><span class="glyphicon" ng-class="check3[node.ip] ? 'glyphicon-check': 'glyphicon-unchecked'" aria-hidden="true"></span></td>
 					<td><a href="" uib-tooltip="IP: {{node.ip}}">{{node.name}}</a></td>
 					<td> {{installedServices(node.services)}} </td>
 					<td style="font-size: 17px;"><span ng-show="node.status==1" class="label label-danger">Disabled</span> <span ng-show="node.status==0" class="label label-success">Enabled</span></td>
@@ -152,27 +162,27 @@
 			<button type="button" class="btn btn-primary" data-toggle="dropdown">Services</button>
 			<button type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"> <span class="caret"></span> <span class="sr-only">Toggle Dropdown</span> </button>
 			<ul class="dropdown-menu" aria-labelledby="dropdownMenu1">
-				<li ng-repeat="service in adminServices"><a href="" ng-click="adminRunService(service.name)"><span class="glyphicon glyphicon-play text-success" aria-hidden="true"></span> {{service.name}}</a></li>
+				<li ng-repeat="service in adminServices" ng-if="service.status==0"><a href="" ng-click="adminRunService(service.name)"><span class="glyphicon glyphicon-play text-success" aria-hidden="true"></span> {{service.name}}</a></li>
 				<li class="divider"></li>
-				<li><a href=""><span class="glyphicon glyphicon-stop text-danger" aria-hidden="true"></span> Stop All Services</a></li>
+				<li><a href="" ng-click="adminStopService()"><span class="glyphicon glyphicon-stop text-danger" aria-hidden="true"></span> Stop All Services</a></li>
 			</ul>
 		</div>
 		<div class="btn-group dropup">
 			<button type="button" class="btn btn-danger" data-toggle="dropdown">Maintenance</button>
 			<button type="button" class="btn btn-danger dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"> <span class="caret"></span> <span class="sr-only">Toggle Dropdown</span> </button>
 			<ul class="dropdown-menu" aria-labelledby="dropdownMenu1">
-				<li><a href=""><span class="glyphicon glyphicon-repeat text-danger" aria-hidden="true"></span> Reboot Nodes</a></li>
+				<li><a href="" ng-click="adminRebootNodes()"><span class="glyphicon glyphicon-repeat text-danger" aria-hidden="true"></span> Reboot Nodes</a></li>
 				<li class="divider"></li>
-				<li><a href=""><span class="glyphicon glyphicon-remove text-danger" aria-hidden="true"></span> Remove Nodes</a></li>
+				<li><a href="" ng-click="adminNodeDelete()"><span class="glyphicon glyphicon-remove text-danger" aria-hidden="true"></span> Remove Nodes</a></li>
 			</ul>
 		</div>
 		<div class="btn-group dropup">
 			<button type="button" class="btn btn-warning" data-toggle="dropdown">Status</button>
 			<button type="button" class="btn btn-warning dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"> <span class="caret"></span> <span class="sr-only">Toggle Dropdown</span> </button>
 			<ul class="dropdown-menu" aria-labelledby="dropdownMenu1">
-				<li><a href=""><span class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span> Enable Nodes</a></li>
+				<li><a href="" ng-click="adminNodesDisable(false)"><span class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span> Enable Nodes</a></li>
 				<li class="divider"></li>
-				<li><a href=""><span class="glyphicon glyphicon-ban-circle text-danger" aria-hidden="true"></span> Disable Nodes</a></li>
+				<li><a href="" ng-click="adminNodesDisable(true)"><span class="glyphicon glyphicon-ban-circle text-danger" aria-hidden="true"></span> Disable Nodes</a></li>
 			</ul>
 		</div>
 	</div>

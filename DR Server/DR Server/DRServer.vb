@@ -100,7 +100,7 @@ End Class
 Module DRServer
 
     Const port As Integer = 55001
-    Dim busyTime = 60 'min
+    Dim globalSettings As Int32()
     Dim output As String = String.Empty
     Dim serviceStatus As String
     Dim sep As String = "------------------------------------------------------"
@@ -202,6 +202,14 @@ Module DRServer
     Public Function getUser()
         Dim getString As String = "ip=" & GetComputerIP()
         Return sendWebGetReques(URL & "exeGetUser.php?" & getString)
+    End Function
+    Public Function getGlobal()
+        Dim r As String = sendWebGetReques(URL & "exeGetGlobal.php")
+        Dim s As String() = r.Split(New Char() {"|"c})
+        Dim o(2) As Int32
+        o(0) = If(s(0) = "1", 1, 0)
+        o(1) = If(s(1) IsNot "", s(1), 120)
+        Return o
     End Function
     Public Function dropNode()
         Dim getString As String = "ip=" & GetComputerIP()
@@ -324,32 +332,37 @@ Module DRServer
             mstrResponse = "ERROR"
 
             Dim cmds As String() = mstrMessage.Split(New Char() {":"c})
-
-            Select Case cmds(0)
-                Case "STARTSERVICE"
-                    busyCnt = 0
-                    Console.WriteLine("START SERVICE: {1}", cmds)
-                    mstrResponse = startService(cmds(1))
-                    setData()
-                Case "STOPSERVICE"
-                    Console.WriteLine("STOP SERVICE: {1}", cmds)
-                    mstrResponse = stopService(cmds(1))
-                Case "CHALLANGE"
-                    Console.WriteLine("CHALLANGE")
-                    mstrResponse = setData()
-                Case "DROP"
-                    mstrResponse = dropNode()
-                    setData()
-                    Console.WriteLine("DROPNODE")
-                Case "REBOOT"
-                    Console.WriteLine("REBOOT")
-                    setData()
-                    mstrResponse = rebootNode()
-                Case "EXIT"
-                    Console.WriteLine("EXIT")
-                    Environment.Exit(0)
-                    mstrResponse = "OK"
-            End Select
+            If globalSettings(0) = 1 Then
+                Select Case cmds(0)
+                    Case "STARTSERVICE"
+                        busyCnt = 0
+                        Console.WriteLine("START SERVICE: {1}", cmds)
+                        mstrResponse = startService(cmds(1))
+                        setData()
+                    Case "STOPSERVICE"
+                        Console.WriteLine("STOP SERVICE: {1}", cmds)
+                        mstrResponse = stopService(cmds(1))
+                    Case "STOPSERVICES"
+                        Console.WriteLine("STOP ALL SERVICES")
+                        stopAllServices()
+                        mstrResponse = "OK"
+                    Case "CHALLANGE"
+                        Console.WriteLine("CHALLANGE")
+                        mstrResponse = setData()
+                    Case "DROP"
+                        mstrResponse = dropNode()
+                        setData()
+                        Console.WriteLine("DROPNODE")
+                    Case "REBOOT"
+                        Console.WriteLine("REBOOT")
+                        setData()
+                        mstrResponse = rebootNode()
+                    Case "EXIT"
+                        Console.WriteLine("EXIT")
+                        Environment.Exit(0)
+                        mstrResponse = "OK"
+                End Select
+            End If
 
             Console.WriteLine(mstrResponse)
             Console.WriteLine(sep)
@@ -436,21 +449,22 @@ Module DRServer
         Next
     End Sub
     Private Sub tickBusy(ByVal sender As Object, ByVal e As System.Timers.ElapsedEventArgs) Handles busyTimer.Elapsed
-        busyTime = Int(objIniFile.GetString("MAIN", "BUSYTIME", ""))
-        Dim user As String = getUser()
+        globalSettings = getGlobal()
 
+        If (globalSettings(0) = 1) Then
+            Dim user As String = getUser()
+            If Int(cpuLoad) < globalSettings(1) Then ' If Free
 
-        If Int(cpuLoad) < 60 Then ' If Free
+                If busyCnt >= globalSettings(1) Or user = "null" Then
+                    startBackBurner()
+                    busyCnt = 0
+                End If
 
-            If busyCnt >= busyTime Or user = "null" Then
-                startBackBurner()
+                busyCnt += 1
+            Else
+                setNodeBusy()
                 busyCnt = 0
             End If
-
-            busyCnt += 1
-        Else
-            setNodeBusy()
-            busyCnt = 0
         End If
     End Sub
     Sub Main()
@@ -458,7 +472,7 @@ Module DRServer
         URL = objIniFile.GetString("MAIN", "URL", "")
         URL = URL & "vault/exe/"
         BACKBURNERSRV = objIniFile.GetString("MAIN", "BACKBURNER", "")
-        busyTime = Int(objIniFile.GetString("MAIN", "BUSYTIME", ""))
+        globalSettings = getGlobal()
 
         ' TIMERS
         cpuTimer.Interval = 1000
@@ -477,7 +491,8 @@ Module DRServer
         Console.WriteLine("")
         Console.WriteLine("SET REMOTE URL: " & URL)
         Console.WriteLine("SET BACKBURNER SERVICE: " & BACKBURNERSRV)
-        Console.WriteLine("SET BUSYTIME: " & busyTime & " MIN")
+        Console.WriteLine("SERVICE IS: " & (If(globalSettings(0) = 1, "ONLINE", "OFFLINE")))
+        Console.WriteLine("SET BUSYTIME: " & globalSettings(1) & " MIN")
         Console.WriteLine("")
 
         ' SOCKET LISTENER

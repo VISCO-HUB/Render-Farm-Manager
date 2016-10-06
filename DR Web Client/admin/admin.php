@@ -38,6 +38,33 @@
 			
 			CASE 'changePassword': ECHO adminChangePassword($MYSQLI, $DATA);
 			BREAK;
+			
+			CASE 'serviceAdd': ECHO adminServiceAdd($MYSQLI, $DATA);
+			BREAK;
+			
+			CASE 'serviceDelete': ECHO adminServiceDelete($MYSQLI, $DATA);
+			BREAK;
+			
+			CASE 'serviceDisable': ECHO adminServiceDisable($MYSQLI, $DATA);
+			BREAK;
+			
+			CASE 'getGlobal': ECHO adminGlobal($MYSQLI);
+			BREAK;
+			
+			CASE 'globalChangeParam': ECHO adminGlobalChangeParam($MYSQLI, $DATA);
+			BREAK;
+			
+			CASE 'sendEmail': ECHO adminSendEmail($MYSQLI, $DATA);
+			BREAK;
+			
+			CASE 'nodesDisable': ECHO adminNodesDisable($MYSQLI, $DATA);
+			BREAK;
+			
+			CASE 'nodeDelete': ECHO adminNodeDelete($MYSQLI, $DATA);
+			BREAK;
+			
+			CASE 'sendCmd': ECHO adminSendCmd($DATA);
+			BREAK;
 		}
 
 		$MYSQLI->CLOSE();			

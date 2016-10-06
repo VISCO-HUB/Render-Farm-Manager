@@ -85,6 +85,12 @@ fn deleteUser =
 	r = httpGet url
 )
 
+fn globalStatus =
+(
+	url = _URL + "vault/mxs/mxsGlobalStatus.php"
+	r = httpGet url
+)
+
 fn getIniVrayParams p d: "0" t: #boolint =
 (
 	u = getUser()
@@ -193,6 +199,8 @@ fn checkNodesVray =
 
 fn checkNodes =
 (
+	if(globalStatus() != "ONLINE") do return false
+	
 	if(isVray()) do 
 	(	
 		checkNodesVray()
@@ -232,12 +240,17 @@ rollout _DR_MONITOR ""
 			
 			if (dialogTitle == "V-Ray distributed rendering settings") then
 			(
-				enabled = getINISetting _DR_INI "OFFLINE" "ENABLE"	
-				
-				UIAccessor.CloseDialog hwnd	
+				if(globalStatus() == "ONLINE") then
+				(
+					UIAccessor.CloseDialog hwnd	
 							
-				try(fileIn (_DR_PATH  + _DR_RUN))catch(messageBox "Lost network connection!" title: "Warning")	
-
+					try(fileIn (_DR_PATH  + _DR_RUN))catch(messageBox "Lost network connection!" title: "Warning")	
+				)
+				else
+				(
+					messageBox "Render Farm Manager currently unavailable!\nAdd nodes manually!" title: "Offline!" beep: false
+				)
+				
 				return true
 			)	
 

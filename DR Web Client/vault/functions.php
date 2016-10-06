@@ -306,6 +306,31 @@
 		ECHO $OUT ;
 	}
 	
+	FUNCTION mysqliGetGlobalStatus()
+	{
+		$MYSQLI = mysqliConnect();
+		
+		IF($MYSQLI->connect_errno) {
+			ECHO "";
+			RETURN FALSE;
+		}
+		
+		$OUT = "OFFLINE";		
+		$QUERY = "SELECT * FROM global WHERE name='status' LIMIT 1;";
+		
+		$RESULT = $MYSQLI->query($QUERY);						
+						
+		$ROW = $RESULT->fetch_object();	
+		
+		IF($ROW->value == 1){		
+			$OUT = "ONLINE";
+		}
+									
+		$MYSQLI->CLOSE();
+		
+		ECHO $OUT ;
+	}
+	
 	// EXE FUNCTIONS
 	FUNCTION exeSetData($DATA)
 	{
@@ -393,6 +418,30 @@
 		
 		IF(COUNT($USER) == 0) RETURN 'null';
 		RETURN $USER;
+	}
+	
+	FUNCTION exeGetGlobal()
+	{
+		$MYSQLI = mysqliConnect();
+				
+		IF($MYSQLI->connect_errno) {
+			ECHO "ERROR";
+			RETURN FALSE;
+		}
+		
+		$OUT = "";
+		$GLOBAL = [];
+		
+		$QUERY = "SELECT * FROM global;";
+		IF ($RESULT = $MYSQLI->query($QUERY)) {
+			
+			WHILE($ROW = $RESULT->fetch_object()) {
+				
+				$GLOBAL[$ROW->name] = $ROW->value;
+			}
+		}
+		
+		RETURN $GLOBAL['status'] . '|' . $GLOBAL['idle'];
 	}
 	
 	FUNCTION exeSetData1($USER, $SERVICE, $CPU, $NAME, $IP)
