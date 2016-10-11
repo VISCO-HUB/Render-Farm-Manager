@@ -34,7 +34,7 @@ Array.prototype.makeUnique = function(){
 }
 
 document.addEventListener("contextmenu", function(e){
-    e.preventDefault();
+   e.preventDefault();
 }, false);
 
 /* APP */
@@ -75,8 +75,6 @@ app.controller("adminCtrl", function($scope, $rootScope, admin){
 	$rootScope.checkAdminDR = [];
 	$rootScope.checkAdminUsers = [];
 	$rootScope.checkAdminServices = [];
-
-	
 	
 	admin.adminGlobal();
 	admin.adminDR();
@@ -88,12 +86,20 @@ app.controller("adminCtrl", function($scope, $rootScope, admin){
 	$scope.getAdminServices = function(){admin.adminServices();};
 	$scope.getAdminUsers = function(){admin.adminUsers();};
 	
+	$scope.adminCheckAllNodes = function(){
+		angular.forEach($rootScope.adminDR, function(value, key){			
+			$rootScope.check3[value.ip] = true;
+		});
+	}
+	
+	$scope.adminUncheckAllNodes = function(){$rootScope.check3 = [];}
+	
 	$scope.installedServices = function(s){	
 		var out = '';
 		
 		angular.forEach(s.split(';'), function(value, key){
 			var r = value.split('=');
-			if(r[1] != 'notfound' && r[0]) {out += r[0] + ', '}
+			if(r[1] != 'notfound' && r[0]) {out += r[0] + '<br>'}
 		});
 		
 		return out.slice(0, -2);
@@ -458,7 +464,7 @@ app.controller("homeCtrl", function ($scope, vault, admin, $timeout, $interval, 
 	
 		var timer = $interval( function(){					
 			vault.getDR();
-		}, 1000);	
+		}, 5000);	
 	
 
 	$rootScope.checkModel = {};
@@ -933,17 +939,17 @@ app.service('vault', function($http, $rootScope, $timeout, $interval, admin) {
 		
 		switch(m){
 			case 'NODESDROPPED': 
-				c = 'User "' + u + '" drop nodes:\r\n\r\n';
+				c = 'User "' + u + '" has dropped nodes:\r\n\r\n';
 				c += old;
-				c += '\r\n\r\nNow free ' + free + ' nodes.';
-				s += ': Nodes Dropped';
+				c += '\r\n\r\nNow ' + free + ' nodes are available.';
+				s += ': Nodes Dropped!';
 			break;
 			case 'NODESRESERVED':
 				c = 'User "' + u + '" reserved nodes:\r\n\r\n';
 				c += 'Job Name: ' + $rootScope.jobName + '\r\n'
 				c += nodes;
-				c += '\r\n\r\nNow free ' + free + ' nodes.';
-				s += ': Nodes Dropped';
+				c += '\r\n\r\nNow ' + free + ' nodes are available.';
+				s += ': Nodes Reserved!';
 			break;
 		}
 			
@@ -967,14 +973,14 @@ app.service('vault', function($http, $rootScope, $timeout, $interval, admin) {
 			var runninSrv = [];
 			
 			angular.forEach(r, function(value, key){
-				if(value.user != null) {$rootScope.checkModel[value.ip] = false;}	
+				//if(value.user != null) {$rootScope.checkModel[value.ip] = false;}	
 				
 				if(value.user != '' && value.user != null && $rootScope.otherUsers.indexOf(value.user) == -1) {$rootScope.otherUsers.push(value.user);}
 				if((value.user == '' || value.user == null) && value.status == 0) {$rootScope.freeNodes.push(value.name);}
 				
 				if($rootScope.userInfo && value.user === $rootScope.userInfo.user)
 				{
-					$rootScope.checkModel[value.ip] = true;
+					//$rootScope.checkModel[value.ip] = true;
 					$rootScope.reservedDr.push(value);
 					$rootScope.reservedDrNames.push(value.name);
 					

@@ -13,6 +13,7 @@ global _DR_PATH = getFileNamePath (getThisScriptFileName())
 global _DR_INI = _DR_PATH + "settings.ini"
 global _URL = ""
 global _CHK = 0
+global isRendering = false
 	
 fn getCurrMaxVer =
 (
@@ -128,6 +129,7 @@ fn checkNodesCorona =
 	CoronaRenderer.CoronaFp.loadDrIpFile dr_cfg
 )
 
+
 fn checkNodesVray =
 (
 	udr = #()
@@ -199,6 +201,8 @@ fn checkNodesVray =
 
 fn checkNodes =
 (
+	isRendering = true
+	
 	if(globalStatus() != "ONLINE") do return false
 	
 	if(isVray()) do 
@@ -211,6 +215,11 @@ fn checkNodes =
 		checkNodesCorona()
 	)
 )
+
+fn renderEnd=
+(
+	isRendering = false
+)	
 
 rollout _DR_MONITOR ""
 (
@@ -229,6 +238,9 @@ rollout _DR_MONITOR ""
 		
 		callbacks.removescripts id:#fwdPreRender
 		callbacks.addScript #preRender "checkNodes()" id:#fwdPreRender persistent:false
+		
+			callbacks.removescripts id:#fwdPostRender
+		callbacks.addScript #postRender "renderEnd()" id:#fwdPostRender persistent:false
 						
 		SetDialogPos _DR_MONITOR [-1000,0]
 						
@@ -238,7 +250,7 @@ rollout _DR_MONITOR ""
 			
 			dialogTitle = uiAccessor.getWindowText hwnd
 			
-			if (dialogTitle == "V-Ray distributed rendering settings") then
+			if (dialogTitle == "V-Ray distributed rendering settings" and not isRendering) then
 			(
 				if(globalStatus() == "ONLINE") then
 				(

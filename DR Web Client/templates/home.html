@@ -2,7 +2,7 @@
 	{{Global.message}}
 </div>
 
-<div ng-show="firstLoad > 0 && Global.status==1">
+<div ng-show="firstLoad > 0 && Global.status==1" class="home">
 <div ng-show="showMsg.warn || showMsg.error || showMsg.success" class="alert alert-dismissible fade in" role="alert" ng-class="{'alert-warning': showMsg.warn, 'alert-success': showMsg.success, 'alert-danger': showMsg.error}">
 			<button type="button" class="close"  aria-label="Close" ng-click="deleteMsg()"><span aria-hidden="true">&times;</span></button>
 			
@@ -36,7 +36,7 @@
 		</td>
 		<td >
 			<span ng-show="node.services">{{node.services}}</span>
-			<span ng-show="!node.services">Backburner</span>
+			<span ng-show="!node.services">None</span>
 		</td>
 		<td class="hidden-xs">
 		<div class="progress" style="margin-bottom: 0;">		
@@ -46,33 +46,36 @@
 	</tr>
 </table>
 </div>
-<button type="button" class="btn btn-success" ng-click="getNodes()"><span class="glyphicon glyphicon-ok" aria-hidden="true"></span> Get Selected</button>	
-<button type="button" class="btn btn-danger" ng-click="dropNodes()"><span class="glyphicon glyphicon-remove" aria-hidden="true"></span> Drop Nodes</button>	
-<div class="btn-group dropup" ng-show="reservedDr.length">
-  <button type="button" class="btn btn-primary" data-toggle="dropdown">Services</button>
-  <button type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-    <span class="caret"></span>
-    <span class="sr-only">Toggle Dropdown</span>
-  </button>
-<ul class="dropdown-menu" aria-labelledby="dropdownMenu1">
-    <li ng-repeat="service in services" ng-if="service.status==0"><a href="" ng-click="runService(service.name)" tooltip-placement="left" uib-tooltip="This action will stop all services and run '{{service.name}}' on reserved nodes."><span class="glyphicon glyphicon-play-circle" aria-hidden="true"></span> {{service.name}}</a></li>        
-	<li class="divider"></li>
-	<li><a href="" ng-click="rebootNodes()" tooltip-placement="left" uib-tooltip="This action will reboot all reserved nodes."><span class="glyphicon glyphicon-repeat" aria-hidden="true"></span> Reboot Nodes</a></li> 
-  </ul>
-</div>
+<div class="main-buttons">
+	<div class="container">
+	<button type="button" class="btn btn-success" ng-click="getNodes()"><span class="glyphicon glyphicon-ok" aria-hidden="true"></span> Get Selected</button>	
+	<button type="button" class="btn btn-danger" ng-click="dropNodes()"><span class="glyphicon glyphicon-remove" aria-hidden="true"></span> Drop Nodes</button>	
+	<div class="btn-group dropup" ng-show="reservedDr.length">
+	  <button type="button" class="btn btn-primary" data-toggle="dropdown">Services</button>
+	  <button type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+		<span class="caret"></span>
+		<span class="sr-only">Toggle Dropdown</span>
+	  </button>
+	<ul class="dropdown-menu" aria-labelledby="dropdownMenu1">
+		<li ng-repeat="service in services" ng-if="service.status==0"><a href="" ng-click="runService(service.name)" tooltip-placement="left" uib-tooltip="This action will stop all services and run '{{service.name}}' on reserved nodes."><span class="glyphicon glyphicon-play-circle" aria-hidden="true"></span> {{service.name}}</a></li>        
+		<li class="divider"></li>
+		<li><a href="" ng-click="rebootNodes()" tooltip-placement="left" uib-tooltip="This action will reboot all reserved nodes."><span class="glyphicon glyphicon-repeat" aria-hidden="true"></span> Reboot Nodes</a></li> 
+	  </ul>
+	</div>
 
-<div class="btn-group dropup" ng-show="userInfo.admin">
-  <button type="button" class="btn btn-warning" data-toggle="dropdown">Admin Tools</button>
-  <button type="button" class="btn btn-warning dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-    <span class="caret"></span>
-    <span class="sr-only">Toggle Dropdown</span>
-  </button>
-<ul class="dropdown-menu" aria-labelledby="dropdownMenu1">
-    <li ng-repeat="otherUser in otherUsers"><a href="" ng-click="adminDropNodes(otherUser)" tooltip-placement="left" uib-tooltip="This action will drop nodes for {{otherUser}}."><span class="glyphicon glyphicon-ban-circle" aria-hidden="true"></span> {{otherUser}}</a></li>        		
-	<li ng-show="!otherUsers.length"><a>No actions</a></li>
-  </ul>
+	<div class="btn-group dropup" ng-show="userInfo.admin">
+	  <button type="button" class="btn btn-warning" data-toggle="dropdown">Admin Tools</button>
+	  <button type="button" class="btn btn-warning dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+		<span class="caret"></span>
+		<span class="sr-only">Toggle Dropdown</span>
+	  </button>
+	<ul class="dropdown-menu" aria-labelledby="dropdownMenu1">
+		<li ng-repeat="otherUser in otherUsers"><a href="" ng-click="adminDropNodes(otherUser)" tooltip-placement="left" uib-tooltip="This action will drop nodes for {{otherUser}}."><span class="glyphicon glyphicon-ban-circle" aria-hidden="true"></span> {{otherUser}}</a></li>        		
+		<li ng-show="!otherUsers.length"><a>No actions</a></li>
+	  </ul>
+	</div>
+	</div>
 </div>
-
 </div>
 </div>
 

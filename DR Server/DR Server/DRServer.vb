@@ -100,7 +100,7 @@ End Class
 Module DRServer
 
     Const port As Integer = 55001
-    Dim globalSettings As Int32()
+    Dim globalSettings As Int64()
     Dim output As String = String.Empty
     Dim serviceStatus As String
     Dim sep As String = "------------------------------------------------------"
@@ -108,8 +108,10 @@ Module DRServer
     Dim cpuCount As Int16 = 0
     Dim busyCnt As Int16 = 0
     Dim BACKBURNERSRV As String = ""
+    Dim UPDATERATE As Int32 = 3
     Dim objIniFile As New clsIni(System.AppDomain.CurrentDomain.BaseDirectory + "\settings.ini")
     Dim URL As String = String.Empty
+    Dim servicesList As String = String.Empty
 
     Dim cpuUsage = New PerformanceCounter("Processor", "% Processor Time", "_Total")
     Private Function sendWebRequest(url As String, Data As String)
@@ -173,16 +175,20 @@ Module DRServer
 
         Return GetIPv4Address
     End Function
-    Private Function getServices() As ArrayList
-        Dim services As New ArrayList
-        Dim Resp As String = ""
-        Resp = sendWebGetReques(URL & "exeGetServices.php")
+    Private Function getServicesList() As String
 
-        If (Resp = "ERROR") Then
-            Return services
+        servicesList = sendWebGetReques(URL & "exeGetServices.php")
+
+        Return servicesList
+    End Function
+    Private Function getServices(Optional ByVal isUpdate As Int16 = 0) As ArrayList
+        Dim services As New ArrayList
+
+        If (servicesList = "") Then
+            getServicesList()
         End If
 
-        Dim s As String() = Resp.Split(New Char() {";"c})
+        Dim s As String() = servicesList.Split(New Char() {";"c})
         For Each i In s
             Try
                 Dim sc = New System.ServiceProcess.ServiceController(i)
@@ -206,7 +212,7 @@ Module DRServer
     Public Function getGlobal()
         Dim r As String = sendWebGetReques(URL & "exeGetGlobal.php")
         Dim s As String() = r.Split(New Char() {"|"c})
-        Dim o(2) As Int32
+        Dim o(2) As Int64
         o(0) = If(s(0) = "1", 1, 0)
         o(1) = If(s(1) IsNot "", s(1), 120)
         Return o
@@ -216,7 +222,6 @@ Module DRServer
         Return sendWebGetReques(URL & "exeDropNode.php?" & getString)
     End Function
     Public Function setData(Optional ByVal isBackBurener As Int16 = 0)
-
         serviceStatus = String.Empty
         getServices()
         Dim user As String = "NONE"
@@ -224,6 +229,7 @@ Module DRServer
         If (isBackBurener = 1) Then user = "BackBurner"
 
         'Dim Data As String = "{""ip"":""" & GetComputerIP() & """, ""name"":""" & GetComputerName() & """, ""cpu"":""" & cpuLoad & """, ""service"":""" & serviceStatus & """, ""user"":""" & user & """}"
+
         Dim getString As String = "ip=" & GetComputerIP() & "&name=" & GetComputerName() & "&cpu=" & cpuLoad & "&service=""" & serviceStatus & """" & "&user=" & user
 
         Return sendWebGetReques(URL & "exeSetData1.php?" & getString)
@@ -247,6 +253,7 @@ Module DRServer
         'Next
         For Each srv In sevices
             For Each s As ServiceController In ServiceController.GetServices()
+                s.Refresh()
                 If s.ServiceName = srv Then
                     If s.Status = ServiceControllerStatus.Running Then
                         s.Stop()
@@ -415,10 +422,10 @@ Module DRServer
     End Sub
     WithEvents cpuTimer As New System.Timers.Timer
     WithEvents busyTimer As New System.Timers.Timer
+    WithEvents setDataTimer As New System.Timers.Timer
     Private Sub tick(ByVal sender As Object, ByVal e As System.Timers.ElapsedEventArgs) Handles cpuTimer.Elapsed
         If cpuCount = 1 Then
             cpuLoad = Int(cpuUsage.NextValue().ToString).ToString
-            setData()
             cpuCount = 0
         Else
             cpuCount += 1
@@ -448,36 +455,54 @@ Module DRServer
             End If
         Next
     End Sub
+    Dim timeStamp2 As Long = DateTime.Now.Ticks
     Private Sub tickBusy(ByVal sender As Object, ByVal e As System.Timers.ElapsedEventArgs) Handles busyTimer.Elapsed
-        globalSettings = getGlobal()
+        If (DateTime.Now.Ticks - timeStamp2 > 10) Then
+            globalSettings = getGlobal()
 
-        If (globalSettings(0) = 1) Then
-            Dim user As String = getUser()
-            If Int(cpuLoad) < globalSettings(1) Then ' If Free
+            If (globalSettings(0) = 1) Then
+                Dim user As String = getUser()
+                If Int(cpuLoad) < globalSettings(1) Then ' If Free
 
-                If busyCnt >= globalSettings(1) Or user = "null" Then
-                    startBackBurner()
+                    If busyCnt >= globalSettings(1) Or user = "null" Then
+                        startBackBurner()
+                        busyCnt = 0
+                    End If
+
+                    busyCnt += 1
+                Else
+                    setNodeBusy()
                     busyCnt = 0
                 End If
-
-                busyCnt += 1
-            Else
-                setNodeBusy()
-                busyCnt = 0
             End If
         End If
+        timeStamp2 = DateTime.Now.Ticks
+    End Sub
+    Dim timeStamp1 As Long = DateTime.Now.Ticks
+    Private Sub tickSetData(ByVal sender As Object, ByVal e As System.Timers.ElapsedEventArgs) Handles setDataTimer.Elapsed
+        If (DateTime.Now.Ticks - timeStamp1 > 1) Then
+            setData()
+        End If
+        timeStamp1 = DateTime.Now.Ticks
     End Sub
     Sub Main()
         ' SETTINGS
         URL = objIniFile.GetString("MAIN", "URL", "")
         URL = URL & "vault/exe/"
         BACKBURNERSRV = objIniFile.GetString("MAIN", "BACKBURNER", "")
+        UPDATERATE = objIniFile.GetInteger("MAIN", "UPDATERATE", 3)
         globalSettings = getGlobal()
+        getServicesList()
+
 
         ' TIMERS
         cpuTimer.Interval = 1000
         AddHandler cpuTimer.Elapsed, AddressOf tick
         cpuTimer.Start()
+
+        setDataTimer.Interval = UPDATERATE * 1000
+        AddHandler setDataTimer.Elapsed, AddressOf tickSetData
+        setDataTimer.Start()
 
         busyTimer.Interval = 60 * 1000 '1 minute
         AddHandler busyTimer.Elapsed, AddressOf tickBusy
@@ -491,8 +516,10 @@ Module DRServer
         Console.WriteLine("")
         Console.WriteLine("SET REMOTE URL: " & URL)
         Console.WriteLine("SET BACKBURNER SERVICE: " & BACKBURNERSRV)
-        Console.WriteLine("SERVICE IS: " & (If(globalSettings(0) = 1, "ONLINE", "OFFLINE")))
         Console.WriteLine("SET BUSYTIME: " & globalSettings(1) & " MIN")
+        Console.WriteLine("SET UPDATERATE: " & UPDATERATE & " SEC")
+        Console.WriteLine("GET SERVICE LIST: " & servicesList)
+        Console.WriteLine("SERVICE IS: " & (If(globalSettings(0) = 1, "ONLINE", "OFFLINE")))
         Console.WriteLine("")
 
         ' SOCKET LISTENER

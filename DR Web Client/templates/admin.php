@@ -153,7 +153,7 @@
 				<tr ng-repeat="node in adminDR"  ng-model="check3[node.ip]" uib-btn-checkbox>
 					<td><span class="glyphicon" ng-class="check3[node.ip] ? 'glyphicon-check': 'glyphicon-unchecked'" aria-hidden="true"></span></td>
 					<td><a href="" uib-tooltip="IP: {{node.ip}}">{{node.name}}</a></td>
-					<td> {{installedServices(node.services)}} </td>
+					<td ng-bind-html="installedServices(node.services)"></td>
 					<td style="font-size: 17px;"><span ng-show="node.status==1" class="label label-danger">Disabled</span> <span ng-show="node.status==0" class="label label-success">Enabled</span></td>
 				</tr>
 			</table>

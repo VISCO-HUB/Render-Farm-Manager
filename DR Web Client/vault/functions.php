@@ -81,7 +81,7 @@
 			RETURN FALSE;
 		}
 		
-		$QUERY = "SELECT * FROM dr WHERE TO_SECONDS(NOW()) - TO_SECONDS(updated) < 10 ;";
+		$QUERY = "SELECT * FROM dr WHERE TO_SECONDS(NOW()) - TO_SECONDS(updated) < 13 ;";
 		IF ($RESULT = $MYSQLI->query($QUERY)) {
 			
 			WHILE($ROW = $RESULT->fetch_object()) {
@@ -519,7 +519,7 @@
 		$MYSQLI = mysqliConnect();
 		
 		IF($MYSQLI->connect_errno) {
-			ECHO 'ERROR';
+			ECHO '';
 			RETURN FALSE;
 		}
 		$S = "";	
