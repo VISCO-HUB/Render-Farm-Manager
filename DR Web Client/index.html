@@ -36,7 +36,7 @@
 			<button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar3"> <span class="sr-only">Toggle navigation</span> 
 						<span class="glyphicon glyphicon-menu-hamburger menu-icon"></span>					
 			</button>
-        <img src="img/visco_logo.svg" class="logo">  <span class="head-title  hidden-xs">Render Farm Manager</span>
+        <a href="#/"><img src="img/visco_logo.svg" class="logo"></a>  <span class="head-title  hidden-xs">Render Farm Manager</span>
       </div>
 	<div id="navbar3" class="navbar-collapse collapse">
         <ul class="nav navbar-nav navbar-right">
@@ -67,7 +67,7 @@
 			{{userInfo.msg}}
 		</div>
 	
-           <div ng-view ng-show="userInfo.logged" ng-class="flip"></div>        
+           <div ng-view ng-class="flip"></div>        
         </div>
 <div class="loading-container" ng-show="firstLoad < 1 || startingSpawners">		
 	<div class="loading"><div class="loading-img"></div></div>

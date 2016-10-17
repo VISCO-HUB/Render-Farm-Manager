@@ -232,8 +232,39 @@ fn renderEnd=
 	isRendering = false
 )	
 
+fn blockDr =
+(															
+	local hwnd = dialogMonitorOps.getWindowHandle()
+				
+	local dialogTitle = uiAccessor.getWindowText hwnd
+		
+	local pHwnd = UIAccessor.GetParentWindow hwnd
+	local pDialogTitle = uiAccessor.getWindowText pHwnd
+	
+	local isParentValid = pDialogTitle != undefined and findString pDialogTitle "Render Setup:" != undefined
+	local isDialogValid = dialogTitle != "" and dialogTitle == "V-Ray distributed rendering settings"
+				
+	if (isDialogValid and not isRendering) then
+	(
+		if(globalStatus() == "ONLINE") then
+		(
+			UIAccessor.CloseDialog hwnd	
+					
+			try(fileIn (_DR_PATH  + _DR_RUN))catch(messageBox "Lost network connection!" title: "Warning")	
+		)
+		else
+		(
+			messageBox "Render Farm Manager currently unavailable!\nAdd nodes manually!" title: "Offline!" beep: false
+		)				
+	)	
+
+	return true
+)	
+
 rollout _DR_MONITOR ""
 (
+	timer tmrRegisterNotifications "" active: true interval: 1000
+	
 	on _DR_MONITOR open do
 	(	
 		_URL = getINISetting _DR_INI "MAIN" "URL"
@@ -253,39 +284,21 @@ rollout _DR_MONITOR ""
 		callbacks.removescripts id:#fwdPostRender
 		callbacks.addScript #postRender "renderEnd()" id:#fwdPostRender persistent:false
 						
-		SetDialogPos _DR_MONITOR [-1000,0]
-						
-		fn blockDr =
-		(															
-			hwnd = dialogMonitorOps.getWindowHandle()
-			
-			dialogTitle = uiAccessor.getWindowText hwnd
-			
-			if (dialogTitle == "V-Ray distributed rendering settings" and not isRendering) then
-			(
-				if(globalStatus() == "ONLINE") then
-				(
-					UIAccessor.CloseDialog hwnd	
-							
-					try(fileIn (_DR_PATH  + _DR_RUN))catch(messageBox "Lost network connection!" title: "Warning")	
-				)
-				else
-				(
-					messageBox "Render Farm Manager currently unavailable!\nAdd nodes manually!" title: "Offline!" beep: false
-				)
-				
-				return true
-			)	
-
-			return true
-		)	
-				
+		SetDialogPos _DR_MONITOR [-1000,0]						
+	)
+	
+	on tmrRegisterNotifications tick do
+	(
+		dialogMonitorOps.enabled = false	
+		dialogMonitorOps.unregisterNotification id:#closeDrWindow
 		dialogMonitorOps.unregisterNotification id:#closeDrWindow
 		dialogMonitorOps.enabled = true
 		dialogMonitorOps.interactive = false
-		dialogMonitorOps.registerNotification blockDr id:#closeDrWindow			
-	)
-		
+		dialogMonitorOps.registerNotification blockDr id:#closeDrWindow
+
+		tmrRegisterNotifications.active = false
+	)	
+	
 	on _DR_MONITOR close do
 	(
 		shutdown()

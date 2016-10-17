@@ -43,21 +43,22 @@ var app = angular.module('app', ['ngRoute', 'ngSanitize', 'ui.bootstrap']);
 
 
 // CONFIG 
-app.config(function($routeProvider) {
-    $routeProvider
-    .when("/", {
-        templateUrl : 'templates/home.html',
+app.config(function($routeProvider) {    
+	timeStamp = new Date().getTime();
+	$routeProvider
+    .when('/home-' + timeStamp, {
+        templateUrl : 'templates/home.php',
 		controller: 'homeCtrl'
     })
-    .when("/admin", {
+    .when('/admin', {
         templateUrl : "templates/admin.php",
 		controller: 'adminCtrl'
     })  
-	.when("/about", {
+	.when('/about', {
         templateUrl : "templates/about.html",
 		controller: 'aboutCtrl'
     }) 	
-	.otherwise({redirectTo:'/'});
+	.otherwise({redirectTo:'/home-' + timeStamp});
 });
 // DIRECTIVES
 
@@ -70,7 +71,7 @@ app.directive("float", function ($window) {
              } else {
                 element.removeClass('float container'); 
              }
-            $scope.$apply();
+            scope.$apply();
         });
     };
 });
@@ -380,14 +381,12 @@ app.controller("homeCtrl", function ($scope, vault, admin, $timeout, $interval, 
 	$rootScope.Global = {};
 	admin.adminGlobal();
 	// sendChallange 
-	$rootScope.firstLoad = 0;
 	vault.getServices();
 	
 	$rootScope.otherUsers = [];
 	
 	$rootScope.sendChallange = function(){
 		//vault.sendChallenge();
-		$rootScope.firstLoad = 10;
 		
 		vault.getDR();
 		$scope.search = '';
@@ -429,6 +428,11 @@ app.controller("homeCtrl", function ($scope, vault, admin, $timeout, $interval, 
 	$scope.dropNodes = function()
 	{		
 		vault.dropNodes();	
+	};
+	
+	$scope.dropSelectedNodes = function()
+	{		
+		vault.dropSelectedNodes();	
 	};
 	
 	$scope.isReserved = function(user)
@@ -478,9 +482,10 @@ app.controller("homeCtrl", function ($scope, vault, admin, $timeout, $interval, 
 		return serviceInfo;
 	}*/
 	
-		var timer = $interval( function(){					
-			vault.getDR();
-		}, 5000);	
+	vault.getDR();
+	var timer = $interval( function(){					
+		vault.getDR();
+	}, 5000);	
 	
 
 	$rootScope.checkModel = {};
@@ -522,6 +527,7 @@ app.run( function($rootScope, $location, $routeParams, vault) {
 		$rootScope.isIE = vault.isIE();
 		
 		vault.logIn();
+		$rootScope.loginShown = false;
 		
 		$rootScope.adminDropNodes = function(u){
 			if(confirm('Do you really want to drop ' + u + '?'))
@@ -868,7 +874,7 @@ app.service('vault', function($http, $rootScope, $timeout, $interval, admin) {
 		$timeout.cancel($rootScope.msgTimer);
 		$rootScope.msgTimer = $timeout(function(){
 			$rootScope.hideMsg = true;
-		}, 3000);
+		}, 5500);
 		
 		m = r.message ? r.message : r;
 		switch(m)
@@ -889,7 +895,7 @@ app.service('vault', function($http, $rootScope, $timeout, $interval, admin) {
 			break;
 			case 'NODESDROPPED':   
 			{
-				if($rootScope.checkResults.length)
+				if($rootScope.reservedDr.length)
 				{	
 					$rootScope.showMsg.success = 'Success. All nodes are dropped! Automatically starting BackBurner service...'; 
 				}
@@ -900,6 +906,7 @@ app.service('vault', function($http, $rootScope, $timeout, $interval, admin) {
 			}
 			break;
 			case 'NODESRESERVED':  
+				
 				if(r.cnt > 0)
 				{
 					$rootScope.showMsg.success = 'Success! ' + r.cnt + ' nodes reserved!';
@@ -911,9 +918,22 @@ app.service('vault', function($http, $rootScope, $timeout, $interval, admin) {
 			break;
 			case 'NONODES':  $rootScope.showMsg.warn = 'Please select at leaset one node!';
 			break;
+			case 'NONODESFORDROP':  $rootScope.showMsg.warn = 'You have no reserved nodes!';
+			break;
 			case 'REBOOT':  $rootScope.showMsg.warn = 'Nodes will reboot! Update the status in few minutes...';
 			break;			
-			case 'STARTSERVICE':  $rootScope.showMsg.warn = 'Start ' + p + ' on all reserved nodes! Update the status in few minutes...';
+			case 'STARTSERVICE':  $rootScope.showMsg.warn = 'Start ' + p + ' on all reserved nodes! Update the status in few minutes...';			
+			break;					
+			case 'NODESSELDROPPED':  
+				if(r.cnt > 0)
+				{
+					$rootScope.showMsg.success = 'Success. Selected ' + r.cnt + ' nodes dropped!';
+				}
+				else
+				{
+					$rootScope.showMsg.warn = 'No nodes dropped!';
+				}
+				
 			break;
 		}
 	}
@@ -1010,7 +1030,7 @@ app.service('vault', function($http, $rootScope, $timeout, $interval, admin) {
 					if(value.services == $rootScope.currentService) {runninSrv.push(true)}			
 				}
 			});			
-			$rootScope.firstLoad++;
+			
 			$rootScope.startingSpawners = $rootScope.reservedDr.length != runninSrv.length && $rootScope.currentService.length;	
 			
 			// SEND EMAIL
@@ -1026,8 +1046,7 @@ app.service('vault', function($http, $rootScope, $timeout, $interval, admin) {
 		HttpPost('socket', json).then(function(r){
 			$rootScope.socketResponse[ip] =  r.data;
 			
-			//getDR();
-			$rootScope.firstLoad++;
+			//getDR();			
 		}, 
 		function(r){
 			$rootScope.socketResponse[ip] =  'DISCONNECTED';
@@ -1079,10 +1098,23 @@ app.service('vault', function($http, $rootScope, $timeout, $interval, admin) {
 	
 	}
 	// GET USER INFO
+	var logOut = function(m)
+	{
+		httpGet('logout').success(function(r){
+			r = {};
+			r.msg = 'You are logout!';
+			if(m) {r.msg = m}
+			$rootScope.userInfo = r;	
+
+			$timeout(function(){location.reload();}, 1000);
+		});		
+	}
+	
 	var logIn = function()
 	{			
 		httpGet('login').success(function(r){			
-			if(!r.logged) 
+						
+			if(!r.logged && $rootScope.loginShown > 3) 
 			{
 				if($rootScope.userInfo)
 				{
@@ -1094,24 +1126,19 @@ app.service('vault', function($http, $rootScope, $timeout, $interval, admin) {
 				}
 			}
 			
-			if(!r.logged) {logIn();}
-			$rootScope.userInfo = r;
+			
+			$rootScope.loginShown++;
+			$rootScope.userInfo = r;			
+			if(!r.logged) {
+				$rootScope.userInfo = {};
+				logIn();
+			}										
 		})
 		.error(function(r){
 			$rootScope.userInfo = {'error': 'Please enter correct e-mail and password!'};
 		});		 				
 	}
-	
-	var logOut = function(m)
-	{
-		httpGet('logout').success(function(r){
-			r.msg = 'You are logout!';
-			if(m) {r.msg = m}
-			$rootScope.userInfo = r;			
-		});
-		
-	}
-	
+
 	
 	var getNodes = function()
 	{	
@@ -1172,7 +1199,34 @@ app.service('vault', function($http, $rootScope, $timeout, $interval, admin) {
 				showMsg(r);
 				
 				getDR(r);
-			}					
+			}
+			else
+			{
+				showMsg('NONODESFORDROP');
+			}
+		});	
+	}
+	
+	var dropSelectedNodes = function()
+	{	
+		var nodes = $rootScope.checkResults;
+		
+		
+		if(!nodes.length) {
+			showMsg('NONODES');
+			return false;
+		}
+				
+					
+		var json = {};
+		json.nodes = nodes;
+		
+		HttpPost('dropSelectedNodes', json).then(function(r){			
+			showMsg(r.data);										
+			getDR(r.data);			
+		}, 
+		function(r){			
+			console.log(r);
 		});	
 	}
 	
@@ -1229,7 +1283,8 @@ app.service('vault', function($http, $rootScope, $timeout, $interval, admin) {
 	isIE: isIE,
 	adminDropNodes: adminDropNodes,
 	getServices: getServices,
-	getLastNodes: getLastNodes	
+	getLastNodes: getLastNodes,
+	dropSelectedNodes: dropSelectedNodes
   };
 
 });
