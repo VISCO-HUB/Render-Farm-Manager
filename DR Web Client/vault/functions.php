@@ -164,7 +164,7 @@
 		RETURN $OUT;
 	}
 	
-	FUNCTION mysqliGetNodes($USER, $DATA)
+	FUNCTION mysqliGetNodes($USER, $DATA, $CLEAR = FALSE)
 	{
 		$MYSQLI = mysqliConnect();
 		
@@ -175,8 +175,10 @@
 		
 		$OUT = '{"message": "NONODES"}';
 		
-		$QUERY = 'UPDATE dr SET user=null, job=null WHERE user="' . $USER . '";';
-		$RESULT = $MYSQLI->query($QUERY);
+		IF($CLEAR){
+			$QUERY = 'UPDATE dr SET user=null, job=null WHERE user="' . $USER . '";';
+			$RESULT = $MYSQLI->query($QUERY);
+		}
 		
 		$COUNT = 0;
 		$JOB = Strip($DATA->job);
@@ -200,12 +202,12 @@
 			$QUERY = 'UPDATE users SET lastnodes="' . $LAST_USED. '" WHERE user="' . $USER . '";';
 			$RESULT = $MYSQLI->query($QUERY);
 		}
-		
+				
 		$MYSQLI->CLOSE();
 		
 		ECHO $OUT ;
 	}
-	
+		
 	FUNCTION mysqliDropNodes($USER)
 	{
 		$MYSQLI = mysqliConnect();
@@ -420,7 +422,7 @@
 		RETURN $USER;
 	}
 	
-	FUNCTION exeGetGlobal()
+	FUNCTION exeGetGlobal($IP)
 	{
 		$MYSQLI = mysqliConnect();
 				
@@ -428,6 +430,8 @@
 			ECHO "ERROR";
 			RETURN FALSE;
 		}
+		
+		$IP = HTMLSPECIALCHARS($IP);
 		
 		$OUT = "";
 		$GLOBAL = [];
@@ -441,7 +445,11 @@
 			}
 		}
 		
-		RETURN $GLOBAL['status'] . '|' . $GLOBAL['idle'];
+		$QUERY = "SELECT * FROM dr WHERE ip='" . $IP . "' LIMIT 1;";
+		$RESULT = $MYSQLI->query($QUERY);
+		$ROW = $RESULT->fetch_object();			
+				
+		RETURN $GLOBAL['status'] . '|' . $GLOBAL['idle'] . '|' . $ROW->status;
 	}
 	
 	FUNCTION exeSetData1($USER, $SERVICE, $CPU, $NAME, $IP)

@@ -59,12 +59,28 @@ app.config(function($routeProvider) {
     }) 	
 	.otherwise({redirectTo:'/'});
 });
+// DIRECTIVES
+
+app.directive("float", function ($window) {
+    return function(scope, element, attrs) {
+      
+        angular.element($window).bind("scroll", function() {
+            if (this.pageYOffset >= attrs.float) {                 
+                element.addClass('float container');
+             } else {
+                element.removeClass('float container'); 
+             }
+            $scope.$apply();
+        });
+    };
+});
 
 // CONTROLLERS
 	// ABOUT
 app.controller("aboutCtrl", function($scope){
 	
 });
+
 	// ADMIN
 app.controller("adminCtrl", function($scope, $rootScope, admin){
 	$scope.adminSection = 'global';
@@ -404,7 +420,7 @@ app.controller("homeCtrl", function ($scope, vault, admin, $timeout, $interval, 
 	{
 		vault.getNodes();
 	};
-		
+			
 	$scope.deleteMsg = function()
 	{
 		$rootScope.showMsg = {};
@@ -517,12 +533,12 @@ app.run( function($rootScope, $location, $routeParams, vault) {
 });
 // SERVICES
 
-app.service('admin', function($http, $rootScope, $timeout, $interval) {	
+app.service('admin', function($http, $rootScope, $timeout, $interval, $timeout) {	
 	
 	var showMsg = function(r, p)
 	{
 		$rootScope.showMsg = {};
-		
+				
 		m = r.message ? r.message : r;
 		switch(m)
 		{			
@@ -847,6 +863,13 @@ app.service('vault', function($http, $rootScope, $timeout, $interval, admin) {
 	{
 		$rootScope.showMsg = {};
 		
+		$rootScope.hideMsg = false;
+		
+		$timeout.cancel($rootScope.msgTimer);
+		$rootScope.msgTimer = $timeout(function(){
+			$rootScope.hideMsg = true;
+		}, 3000);
+		
 		m = r.message ? r.message : r;
 		switch(m)
 		{
@@ -983,7 +1006,7 @@ app.service('vault', function($http, $rootScope, $timeout, $interval, admin) {
 					//$rootScope.checkModel[value.ip] = true;
 					$rootScope.reservedDr.push(value);
 					$rootScope.reservedDrNames.push(value.name);
-					
+					$rootScope.jobName = value.job;
 					if(value.services == $rootScope.currentService) {runninSrv.push(true)}			
 				}
 			});			
@@ -1093,28 +1116,36 @@ app.service('vault', function($http, $rootScope, $timeout, $interval, admin) {
 	var getNodes = function()
 	{	
 		var nodes = $rootScope.checkResults;
+		var jobName = '';
 		
 		if(!nodes.length) {
 			showMsg('NONODES');
 			return false;
 		}
 		
-		var jobName = prompt("Please enter job name", "");			
-			
-		if(!jobName || !jobName.length) {			
-			showMsg('JOBNAME');
-			
-			return false;
-		}
+		if(!$rootScope.reservedDr.length) {
 		
-		if(jobName.length > 40){
-			showMsg('JOBNAMEOVERFLOW');
+			var jobName = prompt("Please enter job name", "");			
 			
-			return false;
+			if(!jobName || !jobName.length) {			
+				showMsg('JOBNAME');
+			
+				return false;
+			}
+			
+			if(jobName.length > 40){
+				showMsg('JOBNAMEOVERFLOW');
+				
+				return false;				
+			}
+			
+			$rootScope.jobName = jobName;
 		}
-		
-		$rootScope.jobName = jobName;
-			
+		else
+		{
+			jobName = $rootScope.jobName;
+		}
+					
 		var json = {};
 		json.nodes = nodes;
 		json.job = jobName;
@@ -1127,7 +1158,7 @@ app.service('vault', function($http, $rootScope, $timeout, $interval, admin) {
 			console.log(r);
 		});	
 	}
-		
+			
 	
 	var dropNodes = function()
 	{		
@@ -1198,7 +1229,7 @@ app.service('vault', function($http, $rootScope, $timeout, $interval, admin) {
 	isIE: isIE,
 	adminDropNodes: adminDropNodes,
 	getServices: getServices,
-	getLastNodes: getLastNodes
+	getLastNodes: getLastNodes	
   };
 
 });

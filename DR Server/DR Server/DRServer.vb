@@ -210,11 +210,13 @@ Module DRServer
         Return sendWebGetReques(URL & "exeGetUser.php?" & getString)
     End Function
     Public Function getGlobal()
-        Dim r As String = sendWebGetReques(URL & "exeGetGlobal.php")
+        Dim r As String = sendWebGetReques(URL & "exeGetGlobal.php?ip=" & GetComputerIP())
+
         Dim s As String() = r.Split(New Char() {"|"c})
         Dim o(2) As Int64
         o(0) = If(s(0) = "1", 1, 0)
         o(1) = If(s(1) IsNot "", s(1), 120)
+        o(2) = If(s(2) = "0", 0, 1)
         Return o
     End Function
     Public Function dropNode()
@@ -444,7 +446,6 @@ Module DRServer
                 End If
             End If
         Next
-        dropNode()
     End Sub
     Private Sub setNodeBusy()
         For Each s As ServiceController In ServiceController.GetServices()
@@ -460,15 +461,18 @@ Module DRServer
         If (DateTime.Now.Ticks - timeStamp2 > 10) Then
             globalSettings = getGlobal()
 
-            If (globalSettings(0) = 1) Then
+            If (globalSettings(0) = 1 And globalSettings(2) = 0) Then
                 Dim user As String = getUser()
-                If Int(cpuLoad) < globalSettings(1) Then ' If Free
+                If Int(cpuLoad) < 60 Then ' If Free
 
                     If busyCnt >= globalSettings(1) Or user = "null" Then
                         startBackBurner()
+                        dropNode()
                         busyCnt = 0
+                        Console.WriteLine("TOUCHDOWN")
                     End If
-
+                    Console.WriteLine(busyCnt)
+                    Console.WriteLine(globalSettings(1))
                     busyCnt += 1
                 Else
                     setNodeBusy()
@@ -486,6 +490,9 @@ Module DRServer
         timeStamp1 = DateTime.Now.Ticks
     End Sub
     Sub Main()
+        ' SET FIRST INFO
+        insertData()
+
         ' SETTINGS
         URL = objIniFile.GetString("MAIN", "URL", "")
         URL = URL & "vault/exe/"
@@ -508,9 +515,6 @@ Module DRServer
         AddHandler busyTimer.Elapsed, AddressOf tickBusy
         busyTimer.Start()
 
-        ' SET FIRST INFO
-        insertData()
-
         ' CONSOLE LOG
         Console.WriteLine("START NODE SERVER")
         Console.WriteLine("")
@@ -520,6 +524,7 @@ Module DRServer
         Console.WriteLine("SET UPDATERATE: " & UPDATERATE & " SEC")
         Console.WriteLine("GET SERVICE LIST: " & servicesList)
         Console.WriteLine("SERVICE IS: " & (If(globalSettings(0) = 1, "ONLINE", "OFFLINE")))
+        Console.WriteLine("NODE STATUS IS: " & (If(globalSettings(2) = 0, "ONLINE", "OFFLINE")))
         Console.WriteLine("")
 
         ' SOCKET LISTENER

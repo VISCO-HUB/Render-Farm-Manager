@@ -14,6 +14,17 @@ global _DR_INI = _DR_PATH + "settings.ini"
 global _URL = ""
 global _CHK = 0
 global isRendering = false
+
+fn shutdown = 
+(
+	dialogMonitorOps.unregisterNotification id:#closeDrWindow
+	dialogMonitorOps.enabled = false
+	
+	callbacks.removescripts id:#fwdUserIni1
+	callbacks.removescripts id:#fwdUserIni2
+	callbacks.removescripts id:#fwdUserIni3
+	callbacks.removescripts id:#fwdPreRender
+)
 	
 fn getCurrMaxVer =
 (
@@ -239,7 +250,7 @@ rollout _DR_MONITOR ""
 		callbacks.removescripts id:#fwdPreRender
 		callbacks.addScript #preRender "checkNodes()" id:#fwdPreRender persistent:false
 		
-			callbacks.removescripts id:#fwdPostRender
+		callbacks.removescripts id:#fwdPostRender
 		callbacks.addScript #postRender "renderEnd()" id:#fwdPostRender persistent:false
 						
 		SetDialogPos _DR_MONITOR [-1000,0]
@@ -277,13 +288,7 @@ rollout _DR_MONITOR ""
 		
 	on _DR_MONITOR close do
 	(
-		dialogMonitorOps.unregisterNotification id:#closeDrWindow
-		dialogMonitorOps.enabled = false
-		
-		callbacks.removescripts id:#fwdUserIni1
-		callbacks.removescripts id:#fwdUserIni2
-		callbacks.removescripts id:#fwdUserIni3
-		callbacks.removescripts id:#fwdPreRender
+		shutdown()
 	)	
 )
 
