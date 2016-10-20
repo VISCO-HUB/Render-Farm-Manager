@@ -78,6 +78,12 @@ tr.reserved td, tr.reserved td a{
 	border-top: #337AB7 !important;
 }
 
+tr.reserved.active td, tr.reserved.active td a{
+	background: #1D4567 !important;
+	color: #FFF;
+	border-top: #1D4567 !important;
+}
+
 .menu-icon{
 	font-size: 35px;
 	color: #A7A9AC;

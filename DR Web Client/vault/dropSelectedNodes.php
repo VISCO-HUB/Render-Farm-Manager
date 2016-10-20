@@ -1,12 +1,14 @@
 <?php		
 	INCLUDE 'config.php';
 	INCLUDE 'functions.php';
-				
+	
+	SESSION_START();
+	
 	$DATA = JSON_DECODE(FILE_GET_CONTENTS('php://input'));
 	
-	IF(ISSET($_SERVER['PHP_AUTH_USER']) && isUserAllow($_SERVER['PHP_AUTH_USER']) != -1)
+	IF(ISSET($_SESSION['user']) && isUserAllow($_SESSION['user']) != -1)
 	{
-		$USER = HTMLSPECIALCHARS($_SERVER['PHP_AUTH_USER']);
+		$USER = HTMLSPECIALCHARS($_SESSION['user']);
 		
 		mysqliDropSelectedNodes($USER, $DATA);
 	}

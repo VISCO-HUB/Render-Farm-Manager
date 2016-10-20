@@ -15,7 +15,8 @@
 		<label class="pull-right hidden-xs" ng-show="!isIE"><span class="glyphicon glyphicon-search" aria-hidden="true"></span> <input ng-model="search.$"></label> 
 		<button type="button" class="btn btn-primary" ng-click="uncheckAll()">Uncheck All</button>
 		<button type="button" class="btn btn-primary" ng-click="checkFree()">Check Free</button>
-		<button type="button" class="btn btn-primary" ng-click="getLastNodes()">Last Used</button>
+		<button type="button" class="btn btn-primary" ng-click="checkReserved()" ng-show="reservedDr.length">Check Reserved</button>
+		<button type="button" class="btn btn-primary" ng-click="getLastNodes()">Last Used</button>		
 	</div>
 </div>
 <br><br>
@@ -29,7 +30,8 @@
 		<th ng-click="orderByParam('services')"><span>Service</span> <span class="glyphicon" ng-show="orderNodes == 'services'" ng-class="reverse ? 'glyphicon-triangle-bottom' : 'glyphicon-triangle-top'" aria-hidden="true"></span></th>
 		<th width="25%" ng-click="orderByParam('cpu')" class="hidden-xs"><span>CPU</span> <span class="glyphicon" ng-show="orderNodes == 'cpu'" ng-class="reverse ? 'glyphicon-triangle-bottom' : 'glyphicon-triangle-top'" aria-hidden="true"></span></th>
 	</tr>
-	<tr ng-repeat="node in dr | orderBy:orderNodes:reverse | filter:search" ip="{{node.ip}}" ng-if="node.status==0" ng-show="socketResponse[node.ip] != 'DISCONNECTED'" ng-disabled="isReserved(node.user) || (node.cpu > 60 && node.user != userInfo.user)"  ng-model="checkModel[node.ip]" uib-btn-checkbox ng-class="{disabled: isReserved(node.user) || (node.cpu > 60 && node.user != userInfo.user), reserved: node.user == userInfo.user}" ng-mouseleave="chekSwipe($event, node.ip, isReserved(node.user) || node.cpu > 60)">
+	<tr ng-repeat="node in dr | orderBy:orderNodes:reverse | filter:search" ip="{{node.ip}}" ng-if="node.status==0" ng-show="socketResponse[node.ip] != 'DISCONNECTED'" ng-disabled="isReserved(node.user) || (node.cpu > 60 && node.user != userInfo.user)"  
+	ng-model="checkModel[node.ip]" uib-btn-checkbox ng-class="{disabled: isReserved(node.user) || (node.cpu > 60 && node.user != userInfo.user), reserved: node.user == userInfo.user && userInfo.user.length}" ng-mouseleave="chekSwipe($event, node.ip, isReserved(node.user) || node.cpu > 60)">
 		<td ><span class="glyphicon" ng-class="checkModel[node.ip] ? 'glyphicon-check': 'glyphicon-unchecked'" aria-hidden="true"></span></td>
 		<td ><a href="" uib-tooltip="IP: {{node.ip}}">{{node.name}}</a></td>
 		<td >
@@ -82,9 +84,7 @@
 			<span class="sr-only">Toggle Dropdown</span>
 		  </button>
 		<ul class="dropdown-menu" aria-labelledby="dropdownMenu1">
-			<li ng-repeat="service in services" ng-if="service.status==0"><a href="" ng-click="runService(service.name)" tooltip-placement="left" uib-tooltip="This action will stop all services and run '{{service.name}}' on reserved nodes."><span class="glyphicon glyphicon-play-circle" aria-hidden="true"></span> {{service.name}}</a></li>        
-			<li class="divider"></li>
-			<li><a href="" ng-click="rebootNodes()" tooltip-placement="left" uib-tooltip="This action will reboot all reserved nodes."><span class="glyphicon glyphicon-repeat" aria-hidden="true"></span> Reboot Nodes</a></li> 
+			<li ng-repeat="service in services" ng-if="service.status==0"><a href="" ng-click="runService(service.name)" tooltip-placement="left" uib-tooltip="This action will stop all services and run '{{service.name}}' on selected nodes."><span class="glyphicon glyphicon-play-circle" aria-hidden="true"></span> {{service.name}}</a></li>        			
 		  </ul>
 		</div>
 

@@ -53,8 +53,8 @@ app.config(function($routeProvider) {
     .when('/admin', {
         templateUrl : "templates/admin.php",
 		controller: 'adminCtrl'
-    })  
-	.when('/about', {
+    })
+	.when('/about/', {
         templateUrl : "templates/about.html",
 		controller: 'aboutCtrl'
     }) 	
@@ -400,7 +400,16 @@ app.controller("homeCtrl", function ($scope, vault, admin, $timeout, $interval, 
 	$scope.checkFree = function() {
 		$rootScope.checkModel = {};
 		angular.forEach($rootScope.dr, function(value, key){
-			if(value.user == '' || value.user == null){
+			if(value.user == '' || value.user == null && value.cpu < 60){
+				$rootScope.checkModel[value.ip] = true;
+			}
+		});
+	}
+	
+	$scope.checkReserved = function() {
+		$rootScope.checkModel = {};
+		angular.forEach($rootScope.dr, function(value, key){
+			if(value.user == $rootScope.userInfo.user){
 				$rootScope.checkModel[value.ip] = true;
 			}
 		});
@@ -451,10 +460,14 @@ app.controller("homeCtrl", function ($scope, vault, admin, $timeout, $interval, 
 	$rootScope.startingSpawners = false;	
 	$rootScope.currentService = '';		
 	
-	$scope.runService = function(x){		
-						
+	$scope.runService = function(x){			
 		if(x != null && x != '')
 		{
+			if(!confirm('Do you really want to start "' + x + '" on selected nodes?'))
+			{
+				return false;
+			}	
+			
 			$rootScope.startingSpawners = true;
 			$rootScope.currentService = x;
 			vault.startService(x);
@@ -527,6 +540,7 @@ app.run( function($rootScope, $location, $routeParams, vault) {
 		$rootScope.isIE = vault.isIE();
 		
 		vault.logIn();
+		
 		$rootScope.loginShown = false;
 		
 		$rootScope.adminDropNodes = function(u){
@@ -922,7 +936,7 @@ app.service('vault', function($http, $rootScope, $timeout, $interval, admin) {
 			break;
 			case 'REBOOT':  $rootScope.showMsg.warn = 'Nodes will reboot! Update the status in few minutes...';
 			break;			
-			case 'STARTSERVICE':  $rootScope.showMsg.warn = 'Start ' + p + ' on all reserved nodes! Update the status in few minutes...';			
+			case 'STARTSERVICE':  $rootScope.showMsg.warn = 'Start ' + p + ' on all selected nodes! Update the status in few minutes...';			
 			break;					
 			case 'NODESSELDROPPED':  
 				if(r.cnt > 0)
@@ -1031,7 +1045,8 @@ app.service('vault', function($http, $rootScope, $timeout, $interval, admin) {
 				}
 			});			
 			
-			$rootScope.startingSpawners = $rootScope.reservedDr.length != runninSrv.length && $rootScope.currentService.length;	
+			//$rootScope.startingSpawners = $rootScope.reservedDr.length != runninSrv.length && $rootScope.currentService.length;	
+			$rootScope.startingSpawners = false;	
 			
 			// SEND EMAIL
 			
@@ -1061,7 +1076,7 @@ app.service('vault', function($http, $rootScope, $timeout, $interval, admin) {
 		{			
 			var ip = a[i].ip;
 			var user = a[i].user;
-			if($rootScope.userInfo && user === $rootScope.userInfo.user)
+			if($rootScope.userInfo && user === $rootScope.userInfo.user && $rootScope.checkModel[ip] == true)
 			{
 				socket(ip, cmd);	
 			}			
@@ -1102,10 +1117,12 @@ app.service('vault', function($http, $rootScope, $timeout, $interval, admin) {
 	{
 		httpGet('logout').success(function(r){
 			r = {};
+			r.user = ''
+			r.logged = false;
 			r.msg = 'You are logout!';
 			if(m) {r.msg = m}
 			$rootScope.userInfo = r;	
-
+			document.execCommand("ClearAuthenticationCache");
 			$timeout(function(){location.reload();}, 1000);
 		});		
 	}
@@ -1135,7 +1152,7 @@ app.service('vault', function($http, $rootScope, $timeout, $interval, admin) {
 			}										
 		})
 		.error(function(r){
-			$rootScope.userInfo = {'error': 'Please enter correct e-mail and password!'};
+			$rootScope.userInfo = {'error': 'Please enter correct e-mail and password!'}; 
 		});		 				
 	}
 
@@ -1179,7 +1196,7 @@ app.service('vault', function($http, $rootScope, $timeout, $interval, admin) {
 		
 		HttpPost('getNodes', json).then(function(r){
 			showMsg(r.data);										
-			getDR(r.data);			
+			getDR(r.data);				
 		}, 
 		function(r){			
 			console.log(r);

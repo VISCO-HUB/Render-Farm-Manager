@@ -1,4 +1,4 @@
-﻿<?php	
+<?php	
 	ini_set('error_reporting', E_ALL);
 	error_reporting(E_ALL);
 	
@@ -6,7 +6,7 @@
 	INCLUDE_ONCE 'functions.php';
 
 	session_set_cookie_params(9999999999999);
-		
+
 	$JSON = ARRAY();	
 	SESSION_START();
 	
@@ -19,48 +19,19 @@
 		EXIT;
 	}
 
-	$BROWSER = GET_BROWSER_NAME();
-	
-	IF(ISSET($_GET['browser'])) 
-	{	
-		$_SESSION['browser'] = $_GET['browser'];
-	}
-	
-	IF(ISSET($_SESSION['browser'])) 
-	{	
-		$BROWSER = $_SESSION['browser'];
-	}
-	
-	
-	
 	$RIGHTS = -1;
-	// TRUST USER!
-	IF(ISSET($_GET['trustuser'])){		
-		$_SESSION['user'] = $_GET['trustuser'];
-		$_SESSION['trustuser'] = true;
-		$_SESSION['logged'] = true;
-	}
-
+		
 	IF (!ISSET($_SESSION['logged'])) {
 		$_SESSION['logged'] = false;
-		IF($BROWSER != 'MXS') 
-		{		
-			AUTH();
-		}
+		AUTH();
 	} 
 	ELSE 
-	{				
-		IF (ISSET($_SESSION['user'])) {				
-				$USER = isUserAllow($_SESSION['user']);
-				IF($USER !== -1)
-				{
-					$_SESSION['logged'] = true;
-					$RIGHTS = $USER->rights;
-				}
-				ELSE
-				{
-					$_SESSION['logged'] = false;
-				}
+	{
+		$USER = isUserAllow($_SESSION['user']);
+		
+		IF (ISSET($_SESSION['user']) && $USER !== -1) {				
+				$_SESSION['logged'] = true;
+				$RIGHTS = $USER->rights;
 		}
 		ELSE
 		{
@@ -68,7 +39,7 @@
 		}
 	}
 			
-	IF ($_SESSION['logged'] === false && ISSET($_SERVER['PHP_AUTH_USER'])) {
+	IF ($_SESSION['logged'] === false) {
 				
 		$USER = isUserAllow($_SERVER['PHP_AUTH_USER']);
 		
@@ -101,10 +72,9 @@
 		
 	
 	$JSON['ip'] = $_SERVER['REMOTE_ADDR'];
-	$JSON['user'] = ISSET($_SESSION['user']) ? $_SESSION['user'] : 'null';	
+	$JSON['user'] = $_SESSION['user'];	
 	$JSON['logged'] = $_SESSION['logged'];	
 	$JSON['admin'] = $RIGHTS == 1;	
-	$JSON['browser'] = $BROWSER;
 			
 	ECHO JSON_ENCODE($JSON);	
 ?>

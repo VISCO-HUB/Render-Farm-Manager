@@ -8,8 +8,9 @@ global _DR_INSTALLED_STARTUP = (getDir #startupScripts) + @"\" + _DR_START
 
 rollout _DR "Distributed Rendering Settings" 
 (
+	dotNetControl WebBrowser2 "System.Windows.Forms.WebBrowser" pos:[-1,-1] width:0 height:0
 	dotNetControl WebBrowser "System.Windows.Forms.WebBrowser" pos:[0,0] width:1000 height:775
-	
+		
 	group "Distributed Rendering Settings:"
 	(
 		checkbox cbxRestartServersOnRenderEnd "Restart servers on render end" across: 2
@@ -37,7 +38,7 @@ rollout _DR "Distributed Rendering Settings"
 	fn getInt i = if(i != undefined and i != "0" and i != "") then return i as integer else return 0
 	fn getFloat  f = if(f != undefined  and f != "") then return f as float else return 100.0
 	fn boolToString b = if(b) then return "1" else return "0"
-	
+
 	fn drSettings t:#get =
 	(
 		u = getUser()
@@ -95,12 +96,23 @@ rollout _DR "Distributed Rendering Settings"
 			)
 		)	 
 	)
-	
+	on _DR close do
+	(
+		WebBrowser.refresh (dotnetclass "system.windows.forms.WebBrowserRefreshOption").completely
+		WebBrowser.Dispose()
+	)
 	on _DR open do
 	(
 		_URL = getINISetting _DR_INI "MAIN" "URL"
+		
 		if(_URL == undefined or _URL == "") do return messageBox "Please set correct Ulr in settings.ini"
+				
+		trust = (_URL + "vault/login.php?trustuser=" + getUser() + "&browser=MXS&time=" + timeStamp() as string)		
+		
+		WebBrowser2.url = dotNetObject "System.Uri" trust				
 		WebBrowser.url = dotNetObject "System.Uri" _URL
+		--WebBrowser.refresh (dotnetclass "system.windows.forms.WebBrowserRefreshOption").completely
+		
 					
 		_INSTALLED = getINISetting _DR_INI "INSTALLED" (getUser())
 		

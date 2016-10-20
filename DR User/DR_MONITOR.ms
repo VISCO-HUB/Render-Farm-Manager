@@ -77,8 +77,7 @@ fn getUserNodes =
 (
 	url = _URL + "vault/mxs/mxsVrayGetUserNodes.php?user=" + getUser()
 	r = httpGet url
-		
-	if(r == "NONODES") do return ""
+
 	return r
 )	
 
@@ -153,7 +152,7 @@ fn checkNodesVray =
 	-- Clear config
 	if(n == "NONODES" or n == "ERROR") do 
 	(		
-		distributedOnVray false
+		--distributedOnVray false
 		
 		deleteFile dr_cfg
 		
@@ -165,7 +164,7 @@ fn checkNodesVray =
 		return false
 	)
 
-	distributedOnVray true
+	--distributedOnVray true
 		
 	deleteFile dr_cfg
 	
