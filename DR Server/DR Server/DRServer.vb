@@ -469,10 +469,7 @@ Module DRServer
                         startBackBurner()
                         dropNode()
                         busyCnt = 0
-                        Console.WriteLine("TOUCHDOWN")
                     End If
-                    Console.WriteLine(busyCnt)
-                    Console.WriteLine(globalSettings(1))
                     busyCnt += 1
                 Else
                     setNodeBusy()

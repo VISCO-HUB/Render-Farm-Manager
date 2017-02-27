@@ -13,7 +13,8 @@ global _DR_PATH = getFileNamePath (getThisScriptFileName())
 global _DR_INI = _DR_PATH + "settings.ini"
 global _URL = ""
 global _CHK = 0
-global isRendering = false
+global _AUTO_DROP_USER = false
+global _isRendering = false
 
 fn shutdown = 
 (
@@ -24,6 +25,12 @@ fn shutdown =
 	callbacks.removescripts id:#fwdUserIni2
 	callbacks.removescripts id:#fwdUserIni3
 	callbacks.removescripts id:#fwdPreRender
+)
+
+fn reload = 
+(
+	try(fileIn (getThisScriptFileName()))catch()
+	messageBox "Success!\nRFM Monitor reloaded!" title: "Notify!"
 )
 	
 fn getCurrMaxVer =
@@ -92,8 +99,11 @@ fn getCoronaUserNodes =
 
 fn deleteUser =
 (
-	url = _URL + "vault/mxs/mxsDropUserNodes.php?user=" + getUser()
-	r = httpGet url
+	if(_AUTO_DROP_USER) do 
+	(
+		url = _URL + "vault/mxs/mxsDropUserNodes.php?user=" + getUser()
+		r = httpGet url
+	)
 )
 
 fn globalStatus =
@@ -134,7 +144,7 @@ fn checkNodesCorona =
 	flush f
 	close f
 	
-	distributedOnCorona true
+	--distributedOnCorona true
 	
 	CoronaRenderer.CoronaFp.loadDrIpFile dr_cfg
 )
@@ -211,7 +221,7 @@ fn checkNodesVray =
 
 fn checkNodes =
 (
-	isRendering = true
+	_isRendering = true
 	
 	if(globalStatus() != "ONLINE") do return false
 	
@@ -228,7 +238,7 @@ fn checkNodes =
 
 fn renderEnd=
 (
-	isRendering = false
+	_isRendering = false
 )	
 
 fn blockDr =
@@ -243,7 +253,7 @@ fn blockDr =
 	local isParentValid = pDialogTitle != undefined and findString pDialogTitle "Render Setup:" != undefined
 	local isDialogValid = dialogTitle != "" and dialogTitle == "V-Ray distributed rendering settings"
 				
-	if (isDialogValid and not isRendering) then
+	if (isDialogValid and not _isRendering) then
 	(
 		if(globalStatus() == "ONLINE") then
 		(
