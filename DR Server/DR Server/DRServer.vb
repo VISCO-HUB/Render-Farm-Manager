@@ -202,7 +202,7 @@ Module DRServer
         Return services
     End Function
     Public Function insertData()
-        Dim getString As String = "ip=" & GetComputerIP() & "&name=" & GetComputerName()
+        Dim getString As String = "ip=" & GetComputerIP() & "&name=" & GetComputerName()        
         Return sendWebGetReques(URL & "exeInsertData1.php?" & getString)
     End Function
     Public Function getUser()
@@ -487,17 +487,19 @@ Module DRServer
         timeStamp1 = DateTime.Now.Ticks
     End Sub
     Sub Main()
-        ' SET FIRST INFO
-        insertData()
 
         ' SETTINGS
         URL = objIniFile.GetString("MAIN", "URL", "")
         URL = URL & "vault/exe/"
         BACKBURNERSRV = objIniFile.GetString("MAIN", "BACKBURNER", "")
         UPDATERATE = objIniFile.GetInteger("MAIN", "UPDATERATE", 3)
+
+        ' SET FIRST INFO
+        insertData()
+
+
         globalSettings = getGlobal()
         getServicesList()
-
 
         ' TIMERS
         cpuTimer.Interval = 1000
