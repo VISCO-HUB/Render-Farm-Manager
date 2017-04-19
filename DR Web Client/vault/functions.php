@@ -262,6 +262,30 @@
 		
 		ECHO '{"message": "NODESSELDROPPED", "cnt": ' . $COUNT . '}';
 	}
+	
+	FUNCTION kickSelectedNodes($DATA)
+	{
+		$MYSQLI = mysqliConnect();
+		
+		IF($MYSQLI->connect_errno) {
+			ECHO "ERROR";
+			RETURN FALSE;
+		}
+						
+		$NODES = [];
+		FOREACH ($DATA->nodes AS $VALUE) {
+			$NODES[] = 'ip="' . $VALUE . '"';
+		}
+		
+		$QUERY = 'UPDATE dr SET user=null, job=null WHERE (' . IMPLODE(' OR ', $NODES) . ');';		
+		$RESULT = $MYSQLI->query($QUERY);
+		$COUNT = $QUERY;
+		$COUNT = $MYSQLI->affected_rows;
+		
+		$MYSQLI->CLOSE();
+		
+		ECHO '{"message": "NODESELKICK", "cnt": ' . $COUNT . '}';
+	}
 
 	FUNCTION mysqliGetLastNodes($USER)
 	{
@@ -509,7 +533,7 @@
 				$ATTACH = "";
 			BREAK;			
 			DEFAULT:
-				$ATTACH = "user='" . $USER . "'";
+				$ATTACH = " user='" . $USER . "'";
 			BREAK;
 		}
 		

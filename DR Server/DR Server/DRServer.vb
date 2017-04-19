@@ -524,6 +524,7 @@ Module DRServer
         Console.WriteLine("GET SERVICE LIST: " & servicesList)
         Console.WriteLine("SERVICE IS: " & (If(globalSettings(0) = 1, "ONLINE", "OFFLINE")))
         Console.WriteLine("NODE STATUS IS: " & (If(globalSettings(2) = 0, "ONLINE", "OFFLINE")))
+        Console.WriteLine("NODE IP: " & GetComputerIP())
         Console.WriteLine("")
 
         ' SOCKET LISTENER

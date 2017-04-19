@@ -30,7 +30,7 @@
 		<th ng-click="orderByParam('services')"><span>Service</span> <span class="glyphicon" ng-show="orderNodes == 'services'" ng-class="reverse ? 'glyphicon-triangle-bottom' : 'glyphicon-triangle-top'" aria-hidden="true"></span></th>
 		<th width="25%" ng-click="orderByParam('cpu')" class="hidden-xs"><span>CPU</span> <span class="glyphicon" ng-show="orderNodes == 'cpu'" ng-class="reverse ? 'glyphicon-triangle-bottom' : 'glyphicon-triangle-top'" aria-hidden="true"></span></th>
 	</tr>
-	<tr ng-repeat="node in dr | orderBy:orderNodes:reverse | filter:search" ip="{{node.ip}}" ng-if="node.status==0" ng-show="socketResponse[node.ip] != 'DISCONNECTED'" ng-disabled="isReserved(node.user) || (node.cpu > 60 && node.user != userInfo.user)"  
+	<tr ng-repeat="node in dr | orderBy:orderNodes:reverse | filter:search" ip="{{node.ip}}" ng-if="node.status==0" ng-show="socketResponse[node.ip] != 'DISCONNECTED'" ng-disabled="(isReserved(node.user) || (node.cpu > 60 && node.user != userInfo.user)) && !userInfo.admin"  
 	ng-model="checkModel[node.ip]" uib-btn-checkbox ng-class="{disabled: isReserved(node.user) || (node.cpu > 60 && node.user != userInfo.user), reserved: node.user == userInfo.user && userInfo.user.length}" ng-mouseleave="chekSwipe($event, node.ip, isReserved(node.user) || node.cpu > 60)">
 		<td ><span class="glyphicon" ng-class="checkModel[node.ip] ? 'glyphicon-check': 'glyphicon-unchecked'" aria-hidden="true"></span></td>
 		<td ><a href="" uib-tooltip="IP: {{node.ip}}">{{node.name}}</a></td>
@@ -44,7 +44,7 @@
 			<span ng-show="node.services">{{node.services}}</span>
 			<span ng-show="!node.services">None</span>
 		</td>
-		<td class="hidden-xs">
+		<td style="min-width: 100px;">
 		<div class="progress" style="margin-bottom: 0;">		
 		  <div class="progress-bar progress-bar-striped active" ng-style="{'width': node.cpu + '%'}" ng-class="{'progress-bar-success': node.cpu > 0, 'progress-bar-warning': node.cpu > 33, 'progress-bar-danger': node.cpu > 66}">{{node.cpu}}%</div>		 		
 		</div>
@@ -97,6 +97,8 @@
 		<ul class="dropdown-menu" aria-labelledby="dropdownMenu1">
 			<li ng-repeat="otherUser in otherUsers"><a href="" ng-click="adminDropNodes(otherUser)" tooltip-placement="left" uib-tooltip="This action will drop nodes for {{otherUser}}."><span class="glyphicon glyphicon-ban-circle" aria-hidden="true"></span> {{otherUser}}</a></li>        		
 			<li ng-show="!otherUsers.length"><a>No actions</a></li>
+			<li ng-show="otherUsers.length" class="divider"></li>
+			<li ng-show="otherUsers.length"><a href="" ng-click="kickSelectedNodes()" tooltip-placement="left" uib-tooltip="This action will kick user for selected node and stop all services."><span class="glyphicon glyphicon-share" aria-hidden="true"></span> Kick Selected User Nodes</a></li>        		
 		  </ul>
 		</div>
 	

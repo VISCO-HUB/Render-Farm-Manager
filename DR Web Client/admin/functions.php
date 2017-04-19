@@ -123,29 +123,51 @@
 		$SUBJECT = $DATA->subject;
 		$CONTENT = $DATA->content;
 		$NOTIFY = $DATA->notify;
+		$USERS = ARRAY_UNIQUE($DATA->users);
 		
 		$ATTACH = '';
-		IF($NOTIFY == 1) $ATTACH = 'WHERE rights=0';
-		IF($NOTIFY == 2) $ATTACH = 'WHERE rights=1';
+		
+		SWITCH($NOTIFY) {
+			CASE 1: $ATTACH = 'WHERE rights=0';
+			BREAK;
+			CASE 2: $ATTACH = 'WHERE rights=1';
+			BREAK;
+			CASE 3: {
+				IF(COUNT($USERS)) {
+					$TMP = [];
+					FOREACH($USERS AS $U) IF(!EMPTY($U)) $TMP[] = 'user="' . $U . '"';
+										
+					IF(!COUNT($TMP)) RETURN $ERROR;
+
+					$ATTACH = 'WHERE ' . IMPLODE('OR', $TMP);						
+				}
+			}
+			BREAK;
+			DEFAULT: RETURN $ERROR;
+			BREAK;
+		}
+		
 		
 		$QUERY = "SELECT * FROM users " . $ATTACH . ";";
 		
 		$USERS = mysqliSelect($MYSQLI, $QUERY);
 		
-		$U = []; 
+		$EMAILS = []; 
 		
-		FOREACH($USERS AS $USER) $U[] = $USER->user . "@visco.no";
+		FOREACH($USERS AS $USER) $EMAILS[] = $USER->user . "@visco.no";
 			
 		$HEADERS   = [];
 		$HEADERS[] = "MIME-Version: 1.0";
 		$HEADERS[] = "Content-type: text/plain; charset=iso-8859-1";
 		$HEADERS[] = "From: RenderFarmManager@viscocg.com";
-		$HEADERS[] = "Reply-To: " . IMPLODE(',', $U); 
+		$HEADERS[] = "Reply-To: " . IMPLODE(',', $EMAILS); 
 		$HEADERS[] = "Subject: " . $SUBJECT;
 		$HEADERS[] = "X-Mailer: PHP/" . PHPVERSION();
+			
+		IF(!COUNT($EMAILS)) RETURN $ERROR;
 		
 		$MESSAGE = WORDWRAP($CONTENT, 70, "\r\n");
-		$SEND = MAIL(IMPLODE(',', $U), $SUBJECT , $MESSAGE, IMPLODE("\r\n", $HEADERS)); 
+		$SEND = MAIL(IMPLODE(',', $EMAILS), $SUBJECT , $MESSAGE, IMPLODE("\r\n", $HEADERS)); 
 		//$SEND = MAIL('v.lukyanenko@visco.no' , $MESSAGE, IMPLODE("\r\n", $HEADERS)); 
 		//$SEND = MAIL('lukuanenko@gmail.com', 'oi' ,'ny je'); 
 		IF(!$SEND) RETURN $ERROR;

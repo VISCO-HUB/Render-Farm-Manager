@@ -33,6 +33,16 @@ Array.prototype.makeUnique = function(){
    return a;
 }
 
+Array.prototype.uniqueArray = function()
+{
+	var n = []; 
+	for(var i = 0; i < this.length; i++) 
+	{
+		if (n.indexOf(this[i]) == -1) n.push(this[i]);
+	}
+	return n;
+}
+
 document.addEventListener("contextmenu", function(e){
    e.preventDefault();
 }, false);
@@ -444,6 +454,16 @@ app.controller("homeCtrl", function ($scope, vault, admin, $timeout, $interval, 
 		vault.dropSelectedNodes();	
 	};
 	
+	$scope.kickSelectedNodes = function() 
+	{
+		if(!confirm('Do you really want to kick users on selected nodes?'))
+		{
+			return false;
+		}
+		
+		vault.kickSelectedNodes();
+	}
+	
 	$scope.isReserved = function(user)
 	{
 		return user != null && $rootScope.userInfo && user != $rootScope.userInfo.user;
@@ -682,13 +702,13 @@ app.service('admin', function($http, $rootScope, $timeout, $interval, $timeout) 
 		{			
 			var ip = a[i].ip;
 			
-			socket(ip, cmd);						
+			socket(ip, cmd);			
 		}	
 	}
 	
+	
 	// USERS
-	var adminAddUser = function(u){
-		
+	var adminAddUser = function(u){		
 		var json = {'user': u};
 		HttpPost('addUser', json).then(function(r){			
 			showMsg(r.data, u);
@@ -793,9 +813,11 @@ app.service('admin', function($http, $rootScope, $timeout, $interval, $timeout) 
 		});		
 	};
 	
-	var adminSendEmail = function(c, s, n){
-		var json = {'content': c, 'subject': s, 'notify': n};
+	var adminSendEmail = function(c, s, n, u){
+		var json = {'content': c, 'subject': s, 'notify': n, 'users': u};
+			console.log(json)	
 		HttpPost('sendEmail', json).then(function(r){
+			console.log(r.data)
 			adminGlobal();			
 		}, 
 		function(r){
@@ -949,6 +971,17 @@ app.service('vault', function($http, $rootScope, $timeout, $interval, admin) {
 				}
 				
 			break;
+			case 'NODESELKICK':  
+			if(r.cnt > 0)
+			{
+				$rootScope.showMsg.success = 'Success. Selected ' + r.cnt + ' user nodes canceled!';
+			}
+			else
+			{
+				$rootScope.showMsg.warn = 'No nodes canceled!';
+			}
+				
+			break;
 		}
 	}
 	
@@ -1007,7 +1040,7 @@ app.service('vault', function($http, $rootScope, $timeout, $interval, admin) {
 				c += nodes;
 				c += '\r\n\r\nNow ' + free + ' nodes are available.';
 				s += ': Nodes Reserved!';
-			break;
+			break;			
 		}
 			
 		if(isSend == 1 && c != ''){			
@@ -1227,8 +1260,7 @@ app.service('vault', function($http, $rootScope, $timeout, $interval, admin) {
 	var dropSelectedNodes = function()
 	{	
 		var nodes = $rootScope.checkResults;
-		
-		
+				
 		if(!nodes.length) {
 			showMsg('NONODES');
 			return false;
@@ -1239,6 +1271,72 @@ app.service('vault', function($http, $rootScope, $timeout, $interval, admin) {
 		json.nodes = nodes;
 		
 		HttpPost('dropSelectedNodes', json).then(function(r){			
+			showMsg(r.data);										
+			getDR(r.data);			
+		}, 
+		function(r){			
+			console.log(r);
+		});	
+	}
+	
+	var sendCmdForIps = function(cmd, ips)
+	{
+		for(var i = 0; i < ips.length; i++)  
+		{			
+			var ip = ips[i];
+			
+			if($rootScope.userInfo && $rootScope.checkModel[ip] == true)
+			{
+				socket(ip, cmd);	
+			}						
+		}	
+	}
+	
+	var kickSelectedEmail = function(user, nodes) 
+	{
+		s = 'Render Nodes Canceled!';
+		
+		c = 'Your Render nodes were canceled by the ' + $rootScope.userInfo.user + '\r\n\r\n';
+		c += 'Please contact this user or system administrator about this issue.\r\n'
+		c += '\r\n\r\nList of canceled nodes:\n';
+		c += nodes.join('\n');
+				
+		admin.adminSendEmail(c, s, 3, [user]);		
+	}
+	
+	var kickSelectedNodes = function()
+	{	
+		var nodes = $rootScope.checkResults;
+		var users = [];
+		var nodesList = {};
+				
+		if(!nodes.length) {
+			showMsg('NONODES');
+			return false;
+		}
+								
+		var json = {};
+		json.nodes = nodes;
+		
+		
+		angular.forEach($rootScope.dr, function(value, key){						
+			if(nodes.indexOf(value.ip) != -1){
+				users.push(value.user);
+				if(nodesList[value.user] == undefined) {nodesList[value.user] = [];}
+				if(value.user) {nodesList[value.user].push(value.name)};
+			}
+		});
+		
+	
+		json.users = users;
+		
+		HttpPost('kickSelectedNodes', json).then(function(r){						
+			sendCmdForIps('STOPSERVICES', nodes);
+			
+			angular.forEach(nodesList, function(value, key){						
+				kickSelectedEmail(key, value);
+			});
+					
 			showMsg(r.data);										
 			getDR(r.data);			
 		}, 
@@ -1301,7 +1399,9 @@ app.service('vault', function($http, $rootScope, $timeout, $interval, admin) {
 	adminDropNodes: adminDropNodes,
 	getServices: getServices,
 	getLastNodes: getLastNodes,
-	dropSelectedNodes: dropSelectedNodes
+	dropSelectedNodes: dropSelectedNodes,
+	kickSelectedNodes: kickSelectedNodes,
+	sendCmdForIps: sendCmdForIps
   };
 
 });
