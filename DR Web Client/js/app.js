@@ -49,26 +49,30 @@ document.addEventListener("contextmenu", function(e){
 
 /* APP */
 
-var app = angular.module('app', ['ngRoute', 'ngSanitize', 'ui.bootstrap']);
+var app = angular.module('app', ['ngRoute', 'ngSanitize', 'ui.bootstrap', 'ngAnimate', 'counter', 'chart.js']);
 
 
 // CONFIG 
 app.config(function($routeProvider) {    
 	timeStamp = new Date().getTime();
 	$routeProvider
-    .when('/home-' + timeStamp, {
+    .when('/home/:office', {
         templateUrl : 'templates/home.php',
 		controller: 'homeCtrl'
     })
-    .when('/admin', {
+    .when('/admin/:page', {
         templateUrl : "templates/admin.php",
 		controller: 'adminCtrl'
+    })
+	.when('/statistic/:page', {
+        templateUrl : "templates/statistic.php",
+		controller: 'statisticCtrl'
     })
 	.when('/about/', {
         templateUrl : "templates/about.html",
 		controller: 'aboutCtrl'
     }) 	
-	.otherwise({redirectTo:'/home-' + timeStamp});
+	.otherwise({redirectTo:'/home/All'});
 });
 // DIRECTIVES
 
@@ -86,27 +90,283 @@ app.directive("float", function ($window) {
     };
 });
 
+app.directive("nodeInfo", function($rootScope) {	 
+    return {
+        templateUrl : 'templates/node-info.html'
+    };
+});
+
 // CONTROLLERS
+	// STATISTIC
+	
+app.controller("statisticCtrl", function ($scope, vault, admin, $timeout, $interval, $rootScope, $routeParams) {
+	$rootScope.totalcnt = 0;
+	$rootScope.farmrender = 0;
+	$rootScope.farmusage = 0;
+	$rootScope.usedoffices = 0;
+	$rootScope.usedgroups = 0;
+	$rootScope.usersrend = 0;
+	$rootScope.youused	= 0;
+	$rootScope.efficiencyPercent = 0;
+	$rootScope.efficiencyUsed = 0;
+	$rootScope.efficiencyUnused = 0;
+	$rootScope.counterDuration = 2000;
+	
+	$rootScope.statistic = {
+		'totalcnt': 0,
+		'farmusage': 0,
+		'farmrender': 0,
+		'usedoffices': 0,
+		'usedgroups': 0,
+		'youused': 0,
+		'efficiency': {
+			'percent': 0,
+			'used': 0,
+			'unused': 0
+		},
+		'usersrend': 0,
+		'topuser': 'N/A'
+	};
+	
+	$scope.lastWeek = new Date();
+	$scope.lastWeek.setDate($scope.lastWeek.getDate() - 7);
+	
+	// Date Picker
+	$rootScope.dt = {
+		'from': $scope.lastWeek,
+		'to': new Date()
+	}
+	
+	$scope.office_filter = 'Lviv';
+	$scope.setOfficeFilter = function(o) {
+		$scope.office_filter = o;
+		$scope.getStatistic();
+	}
+				
+	$rootScope.period = 'Week';
+			
+	$scope.changePeriod = function(p) {		
+		$rootScope.period = p;
+		$scope.getStatistic();
+	};
+		
+	$scope.getStatistic = function() {
+		vault.getStatistic($rootScope.period, $scope.dt, $scope.office_filter);
+	}
+	
+	$scope.getStatistic();
+		
+	$scope.setDate = function(year, month, day) {
+		$scope.dt = new Date(year, month, day);
+	};
+		
+		
+	$rootScope.dataFarmByNodeEmpl = [];
+		
+	// RenderTime Graph
+
+	$rootScope.dataMonthRenderTime = [];	
+	$rootScope.labelsMonthRenderTime = [];	
+	
+	$scope.datasetOverrideRenderTime = [
+      {
+        label: "Hours",
+        borderWidth: 3,
+        hoverBackgroundColor: "rgba(255,99,132,0.4)",
+        hoverBorderColor: "rgba(255,99,132,1)",
+		pointRadius: 6   
+      },
+	  {}
+    ];
+	
+	$scope.colorsRenderTime = ['rgba(0,154,191,0.5)'];
+	
+	$scope.optionsRenderTime = {
+		scales: {
+			reverse: true,
+			yAxes: [
+			{
+			 ticks:				
+				{
+					beginAtZero:true
+				}
+			}
+		  ]
+		}
+	};
+	
+	// Render by user graph
+	
+	$rootScope.dataUserEmpl = [];
+	$rootScope.labelsUserEmpl = [];
+		
+	$rootScope.labelsColorsUserEmpl = ['#35A9E1', '#FF5555', '#FABB3C', '#8064A2', '#4BACC6', '#F79646', '#2C4D75', '#C0504D'];
+	$scope.datasetOverrideUserEmpl = [
+      {
+        label: "Nodes",
+        borderWidth: 3
+      },
+	  {}
+    ];
+	
+	$scope.optionsUserEmpl = {
+		responsive: true,
+		maintainAspectRatio: true,
+		segmentShowStroke: false,
+		animateRotate: true,
+		animateScale: false,
+		percentageInnerCutout: 50,
+		legend: {
+			display: false,
+			position: 'bottom',
+			fullWidth: false
+		}
+	};
+	
+	// Render by user graph
+	
+	$rootScope.dataFarmUsage = [];
+	$rootScope.labelsFarmUsage = [];
+		
+	$rootScope.labelsColorsFarmUsage = ['#5CB85C', '#D9534F'];
+	$scope.datasetOverrideFarmUsage = [
+      {
+        label: "Nodes",
+        borderWidth: 3
+      },
+	  {}
+    ];
+	
+	$scope.optionsFarmUsage = {
+		responsive: true,
+		maintainAspectRatio: true,
+		segmentShowStroke: false,
+		animateRotate: true,
+		animateScale: false,
+		percentageInnerCutout: 50,
+		legend: {
+			display: false,
+			position: 'bottom',
+			fullWidth: false
+		}
+	};
+	
+	// Render by office
+	
+	$rootScope.dataRenderOffice = [];
+	$rootScope.labelsRenderOffice = [];
+		
+	$rootScope.labelsColorsRenderOffice = ['#8064A2', '#00C0EF', '#D66A34', '#1A8C46', '#DE4B39', '#2C4D75'];
+	$scope.datasetOverrideRenderOffice = [
+      {
+        label: "Nodes",
+        borderWidth: 3
+      },
+	  {}
+    ];
+	
+	$scope.optionsRenderOffice = {
+		responsive: true,
+		maintainAspectRatio: true,
+		segmentShowStroke: false,
+		animateRotate: true,
+		animateScale: false,
+		percentageInnerCutout: 50,
+		legend: {
+			display: false,
+			position: 'bottom',
+			fullWidth: false
+		}
+	};
+	
+	
+	// Farm Empl
+	
+	
+	$rootScope.dataFarmEmpl = [];
+	$rootScope.labelsFarmEmpl = [];
+		
+	$rootScope.labelsColorsFarmEmpl = ['#5CB85C', '#D9534F'];
+	$scope.datasetOverrideFarmEmpl = [
+      {
+        label: "Nodes",
+        borderWidth: 3
+      },
+	  {}
+    ];
+	
+	$scope.optionsFarmEmpl = {
+		responsive: true,
+		maintainAspectRatio: true,
+		segmentShowStroke: false,
+		animateRotate: true,
+		animateScale: false,
+		percentageInnerCutout: 50,
+		legend: {
+			display: false,
+			position: 'bottom',
+			fullWidth: false
+		}
+	};
+	
+	// Farm Nodes Empl
+	
+	
+	$rootScope.dataFarmPowerEmpl = [];
+	$rootScope.labelsFarmPowerEmpl = [];
+		
+	$rootScope.labelsColorsFarmPowerEmpl = ['#0D95BC', '#063951', '#EBCB38', '#A2B969', '#0D95BC', '#802750', '#482B56', '#A21C56', '#F36F13'];
+	$scope.datasetOverrideFarmPowerEmpl = [
+      {
+        label: "Nodes",
+        borderWidth: 3
+      },
+	  {}
+    ];
+	
+	$scope.optionsFarmPowerEmpl = {
+		responsive: true,
+		maintainAspectRatio: true,
+		segmentShowStroke: false,
+		animateRotate: true,
+		animateScale: false,
+		percentageInnerCutout: 50,
+		legend: {
+			display: false,
+			position: 'bottom',
+			fullWidth: false
+		}
+	};
+	
+});
+
+
 	// ABOUT
 app.controller("aboutCtrl", function($scope){
 	
 });
 
 	// ADMIN
-app.controller("adminCtrl", function($scope, $rootScope, admin){
-	$scope.adminSection = 'global';
+app.controller("adminCtrl", function($scope, $rootScope, admin, $routeParams){
+	$scope.adminSection = $routeParams.page;
 	$rootScope.adminDR = [];
 	$rootScope.Global = {};
 	$rootScope.adminServices = [];	
+	$rootScope.adminGroups = [];	
+	$rootScope.adminOffices = [];	
 	$rootScope.adminUsers = [];
 	$rootScope.checkAdminDR = [];
 	$rootScope.checkAdminUsers = [];
-	$rootScope.checkAdminServices = [];
+	$rootScope.checkAdminItems = [];
+	$rootScope.Groups = [];
+	$rootScope.Offices = [];
 	
 	admin.adminGlobal();
 	admin.adminDR();
 	admin.adminServices();
 	admin.adminUsers();
+	admin.adminGroups();
+	admin.adminOffices();
 	
 	$scope.getAdminGlobal = function(){admin.adminGlobal();};
 	$scope.getAdminDR = function(){admin.adminDR();};
@@ -117,6 +377,22 @@ app.controller("adminCtrl", function($scope, $rootScope, admin){
 		angular.forEach($rootScope.adminDR, function(value, key){			
 			$rootScope.check3[value.ip] = true;
 		});
+	}
+	
+	$scope.nodeSortParam = 'name';
+	$scope.nodeSortReverce = true;
+	
+	$scope.nodeSort = function(param){	
+		$scope.nodeSortReverce = ($scope.nodeSortParam === param) ? !$scope.nodeSortReverce : false;
+		$scope.nodeSortParam = param;
+	}
+	
+	$scope.userSortParam = 'user';
+	$scope.userSortReverce = false;
+	
+	$scope.userSort = function(param){	
+		$scope.userSortReverce = ($scope.userSortParam === param) ? !$scope.userSortReverce : false;
+		$scope.userSortParam = param;
 	}
 	
 	$scope.adminUncheckAllNodes = function(){$rootScope.check3 = [];}
@@ -159,7 +435,7 @@ app.controller("adminCtrl", function($scope, $rootScope, admin){
 		var u = $rootScope.checkAdminUsers;
 		
 		if(!u.length){
-			admin.showMsg('ADMINNOSELECTED');
+			alert('Please select nodes!');
 			return false;
 		}
 		
@@ -174,7 +450,7 @@ app.controller("adminCtrl", function($scope, $rootScope, admin){
 		var u = $rootScope.checkAdminUsers;
 		
 		if(!u.length){
-			admin.showMsg('ADMINNOSELECTED');
+			alert('Please select nodes!');
 			return false;
 		}
 		
@@ -200,49 +476,195 @@ app.controller("adminCtrl", function($scope, $rootScope, admin){
 		admin.adminChangePassword(u, pwd);
 	};
 	
-	// SERVICES
+	$scope.adminAssignNodeGroup = function(grp) {
+		var s = $rootScope.checkAdminDR;
 	
-	$scope.adminServiceAdd = function(){
-		serviceName = prompt("Please enter Service Name", "");
-		
-			
-		if(!serviceName || !serviceName.length) {			
-			admin.showMsg('ADMINBADSERVICENAME');
-			
+		if((!grp || !grp.length) && grp != -1) {
+			admin.showMsg('ADMINBADGROUP');
 			return false;
 		}
 		
-		admin.adminServiceAdd(serviceName);
+		if(!s.length) {
+			alert('Please select nodes!');
+			return false;
+		}
+		
+		if(grp == -1) {grp = null;}
+		
+		admin.adminAssignNodeGroup(s, grp);
 	}
 	
-	$scope.adminServiceDelete = function(){
-		var s = $rootScope.checkAdminServices;
-		
-		if(!s.length){
-			admin.showMsg('ADMINNOSELECTED');
+	$scope.adminAssignGroup = function(a) {
+		var u = $rootScope.checkAdminUsers;
+		var grp = null;
+			
+		if(!u.length) {
+			alert('Please select users!');
 			return false;
 		}
-		
-		if(!confirm('Do you really want to delete ' + s.length + ' selected services?')){
-			return false;
+					
+		switch(a) {
+			case 1: {
+				grp = prompt("Please enter group name!)", "");
+				if(!grp || !grp.length) {
+					admin.showMsg('ADMINBADGROUP');
+					return false;
+				}
+			}
+			break;
+			case -1:
+			{
+				if(!confirm('Do you really want to clear groups for ' + u.length + ' selected users?')){
+					return false;
+				}
+				
+				grp = null;
+			}
+			break;
+			default:
+			{
+				if(!a || !a.length) {
+					admin.showMsg('ADMINBADGROUP');
+					return false;
+				}
+				
+				grp = a;
+			}
+			break;
 		}
-		
-		admin.adminServiceDelete(s);
+			
+		admin.adminAssignGroup(u, grp);
 	};
 	
-	$scope.adminServiceDisable = function(d){
-		var s = $rootScope.checkAdminServices;
+	$scope.adminNodesPower = function(type) {
+		var s = $rootScope.checkAdminDR;
+		var power = 0;
+						
+		if(!s.length) {
+			alert('Please select nodes!');
+			return false;
+		}
+			
+		if(!confirm('Do you really want to change power for selected nodes?')){
+			return false;
+		}
+			
+		
+		power = prompt("Please enter the power in Watt", "");
+		
+		if(power.match(/[^0-9]/)) {
+			alert('Wrong format! Please enter just number ex.: 250');
+			return false;
+		}
+					
+		admin.adminNodesPower(s, type, power);
+	};
+	
+	$scope.adminAssignNodeOffice = function(a) {
+		var s = $rootScope.checkAdminDR;
+		var office = null;
+			
+		if(!s.length) {
+			alert('Please select nodes!');
+			return false;
+		}
+					
+		switch(a) {
+			case 1: {
+				office = prompt("Please enter office name!)", "");
+				if(!office || !office.length) {
+					admin.showMsg('ADMINBADGROUP');
+					return false;
+				}
+			}
+			break;
+			case -1:
+			{
+				if(!confirm('Do you really want to clear office for ' + s.length + ' selected nodes?')){
+					return false;
+				}
+				
+				office = null;
+			}
+			break;
+			default:
+			{
+				if(!a || !a.length) {
+					admin.showMsg('ADMINBADGROUP');
+					return false;
+				}
+				
+				office = a;
+			}
+			break;
+		}
+			
+		admin.adminAssignNodeOffice(s, office);
+	};
+	
+	$scope.adminNodesDescription = function(a) {
+		var s = $rootScope.checkAdminDR;
+		var desc = null;
+						
+		if(!s.length) {
+			alert('Please select nodes!');
+			return false;
+		}
+			
+		if(!confirm('Do you really want to change description for selected nodes?')){
+			return false;
+		}
+			
+		if(a == true) {
+			desc = prompt("Please enter the description", "");
+		}
+					
+		admin.adminNodesDescription(s, desc);
+	};
+	
+	// SERVICES
+	
+	$scope.adminItemAdd = function(item){
+		name = prompt("Please enter the name", "");
+		
+			
+		if(!name || !name.length) {			
+			admin.showMsg('ADMINBADITEMNAME');
+			
+			return false;
+		}
+		
+		admin.adminItemAdd(item, name);
+	}
+	
+	$scope.adminItemDelete = function(item){
+		var s = $rootScope.checkAdminItems;
 		
 		if(!s.length){
-			admin.showMsg('ADMINNOSELECTED');
+			alert('Please select nodes!');
 			return false;
 		}
 		
-		if(!confirm('Do you really want to change status for ' + s.length + ' selected services?')){
+		if(!confirm('Do you really want to delete ' + s.length + ' selected items?')){
 			return false;
 		}
 		
-		admin.adminServiceDisable(s, d);
+		admin.adminItemDelete(s, item);
+	};
+	
+	$scope.adminItemDisable = function(d, item){
+		var s = $rootScope.checkAdminItems;
+		
+		if(!s.length){
+			alert('Please select nodes!');
+			return false;
+		}
+		
+		if(!confirm('Do you really want to change status for ' + s.length + ' selected items?')){
+			return false;
+		}
+		
+		admin.adminItemDisable(s, d, item);
 	};
 	
 	// GLOBAL 
@@ -282,7 +704,7 @@ app.controller("adminCtrl", function($scope, $rootScope, admin){
 		var s = $rootScope.checkAdminDR;
 		
 		if(!s.length){
-			admin.showMsg('ADMINNOSELECTED');
+			alert('Please select nodes!');
 			return false;
 		}
 		
@@ -293,11 +715,26 @@ app.controller("adminCtrl", function($scope, $rootScope, admin){
 		admin.adminNodesDisable(s, d);
 	}
 	
+	$scope.adminNodesAutoStartSrv = function(d){
+		var s = $rootScope.checkAdminDR;
+		
+		if(!s.length){
+			alert('Please select nodes!');
+			return false;
+		}
+		
+		if(!confirm('Do you really want to change auto start BBurner for ' + s.length + ' selected nodes?')){
+			return false;
+		}
+		
+		admin.adminNodesAutoStartSrv(s, d);
+	}
+	
 	$scope.adminNodeDelete = function(){
 		var s = $rootScope.checkAdminDR;
 		
 		if(!s.length){
-			admin.showMsg('ADMINNOSELECTED');
+			alert('Please select nodes!');
 			return false;
 		}
 		
@@ -312,7 +749,7 @@ app.controller("adminCtrl", function($scope, $rootScope, admin){
 		var s = $rootScope.checkAdminDR;
 		
 		if(!s.length){
-			admin.showMsg('ADMINNOSELECTED');
+			alert('Please select nodes!');
 			return false;
 		}
 		
@@ -364,13 +801,13 @@ app.controller("adminCtrl", function($scope, $rootScope, admin){
 		  }
 		});
 	  });
-	$rootScope.check2 = {};
-	$scope.$watchCollection('check2', function () {
-		$rootScope.checkAdminServices = [];
+	$rootScope.checkItem = {};
+	$scope.$watchCollection('checkItem', function () {
+		$rootScope.checkAdminItems = [];
 		
-		angular.forEach($rootScope.check2, function (value, key) {
+		angular.forEach($rootScope.checkItem, function (value, key) {
 		  if (value) {
-			$rootScope.checkAdminServices.push(key);			
+			$rootScope.checkAdminItems.push(key);			
 		  }
 		});
 	  });
@@ -387,14 +824,26 @@ app.controller("adminCtrl", function($scope, $rootScope, admin){
 	  });
 });
 	// HOME
-app.controller("homeCtrl", function ($scope, vault, admin, $timeout, $interval, $rootScope) {
+app.controller("homeCtrl", function ($scope, vault, admin, $timeout, $interval, $rootScope, $routeParams, $sce) {
 	$rootScope.Global = {};
 	admin.adminGlobal();
 	// sendChallange 
 	vault.getServices();
+	vault.getOffices();
 	
 	$rootScope.otherUsers = [];
-	
+		
+	$scope.hideShowNodeInfo = function(ip) {
+		$rootScope.showNodeInfo = ip;
+		
+		if(!ip){			
+			return false;
+		}
+		
+		vault.getNodeInfo(ip);
+		$rootScope.checkModel[ip] = true;
+	}
+		
 	$rootScope.sendChallange = function(){
 		//vault.sendChallenge();
 		
@@ -423,6 +872,23 @@ app.controller("homeCtrl", function ($scope, vault, admin, $timeout, $interval, 
 				$rootScope.checkModel[value.ip] = true;
 			}
 		});
+	}
+		
+	$scope.getRam = function(r, a)	{
+		f = parseFloat(r) - parseFloat(a);		
+		f = Math.round(parseFloat(f) * 100.0) / 100.0;
+		return  f + " GB / " + r + " GB";
+	}
+	
+	$scope.getTooltip = function(ip, desc) { 
+		t = '';		
+		if(ip) {t += '<b>IP</b>: ' + ip + '<br>';}
+		if(desc) {t += '<b>INFO</b>: ' + desc + '<br>';}
+		return t;	
+	}
+	
+	$scope.getFreeRam = function(r, a)	{	
+		return Math.round((parseFloat(r) - parseFloat(a)) / parseFloat(r) * 100.0);
 	}
 		
 	$scope.getLastNodes = function(){
@@ -469,6 +935,8 @@ app.controller("homeCtrl", function ($scope, vault, admin, $timeout, $interval, 
 		return user != null && $rootScope.userInfo && user != $rootScope.userInfo.user;
 	};
 	
+	$scope.office = $routeParams.office;
+		
 	$scope.orderNodes = 'name';
 	$scope.reverse = false;
 	
@@ -516,7 +984,13 @@ app.controller("homeCtrl", function ($scope, vault, admin, $timeout, $interval, 
 	}*/
 	
 	vault.getDR();
-	var timer = $interval( function(){					
+	
+	if (angular.isDefined($rootScope.timer)) {
+		$interval.cancel($rootScope.timer);
+		$rootScope.timer = undefined;
+	}
+	
+	$rootScope.timer = $interval( function(){					
 		vault.getDR();
 	}, 5000);	
 	
@@ -527,9 +1001,7 @@ app.controller("homeCtrl", function ($scope, vault, admin, $timeout, $interval, 
 		$rootScope.checkResultsNames = [];
 		angular.forEach($rootScope.checkModel, function (value, key) {
 		  if (value) {
-			$rootScope.checkResults.push(key);
-			//$rootScope.checkResults.push($rootScope.dr[]);
-			
+			$rootScope.checkResults.push(key);		
 		  }
 		});
 	  });
@@ -548,7 +1020,26 @@ app.controller("homeCtrl", function ($scope, vault, admin, $timeout, $interval, 
 });
 // AUTO RUN
 app.run( function($rootScope, $location, $routeParams, vault) {
-    $rootScope.$watch(function() { 
+    
+	$rootScope.showNodeInfo = false;
+	
+	$rootScope.stringToColour = function(str) {
+		if(!str) {return 'gray';}
+		
+		var hash = 0;
+		for (var i = 0; i < str.length; i++) {
+			hash = str.charCodeAt(i) + ((hash << 4) - hash);
+		}
+		var color = '#';
+		for (var i = 0; i < 3; i++) {
+			var value = ((hash >> (i * 1)) & 0xFF) * 2;
+			color += ('00' + value.toString(16)).substr(-2);
+		}
+		return color;
+	}
+	
+	
+	$rootScope.$watch(function() { 
         return $location.path(); 
     },
      function(a){
@@ -556,7 +1047,12 @@ app.run( function($rootScope, $location, $routeParams, vault) {
 		$rootScope.socketResponse = {};
 		$rootScope.showMsg = {};
 		$rootScope.logIn = function(){vault.logIn();}
-		$rootScope.logOut = function(m){vault.logOut(m);}
+		$rootScope.logOut = function(m){
+			if(confirm('Do you really want to logut?'))
+			{
+				vault.logOut(m);
+			}					
+		}
 		$rootScope.isIE = vault.isIE();
 		
 		vault.logIn();
@@ -604,11 +1100,11 @@ app.service('admin', function($http, $rootScope, $timeout, $interval, $timeout) 
 			break;
 			case 'ADMINBADPASSWORD':  $rootScope.showMsg.warn = 'Please enter correct Password!';
 			break;
-			case 'ADMINBADSERVICENAME':  $rootScope.showMsg.warn = 'Please enter correct Service Name!';
+			case 'ADMINBADITEMNAME':  $rootScope.showMsg.warn = 'Please enter correct name!';
 			break;
-			case 'ADMINSERVICEADDED':  $rootScope.showMsg.success = 'Success! Service "' + p + '" added!';
+			case 'ADMINITEMADDED':  $rootScope.showMsg.success = 'Success! Item "' + p + '" added!';
 			break;
-			case 'ADMINSERVICENOTADDED':  $rootScope.showMsg.error = 'Error! Service "' + p + '" not added!';
+			case 'ADMINITEMNOTADDED':  $rootScope.showMsg.error = 'Error! Item "' + p + '" not added!';
 			break;
 			case 'ADMINDELETEBAD':  $rootScope.showMsg.error = 'Error! Items not deleted!';
 			break;
@@ -621,6 +1117,8 @@ app.service('admin', function($http, $rootScope, $timeout, $interval, $timeout) 
 			case 'ADMINGLOBALBADINPUT':  $rootScope.showMsg.warn = 'Please enter correct value!';
 			break;
 			case 'ADMINSTATUSBAD':  $rootScope.showMsg.error = 'Error! Status not chaged!';
+			break;
+			case 'ADMINCHAGEPOWERBAD':  $rootScope.showMsg.error = 'Error while update the value!';
 			break;	
 			case 'ADMINSTATUSOK':  $rootScope.showMsg.success = 'Success! Status changed to "' + (p ? 'Disable' : 'Enable') + '"!';
 			break;
@@ -630,7 +1128,7 @@ app.service('admin', function($http, $rootScope, $timeout, $interval, $timeout) 
 			break;	
 			case 'ADMINREBOOT':  $rootScope.showMsg.warn = 'Try to force reboot selected nodes!';
 			break;			
-			default: $rootScope.showMsg.error = 'Error! Can`t receive responce from server!';
+			case 'ERROR': $rootScope.showMsg.error = 'Error! Can`t receive responce from server!';
 			break;
 		}
 	}
@@ -670,6 +1168,15 @@ app.service('admin', function($http, $rootScope, $timeout, $interval, $timeout) 
 			$rootScope.adminDR = [];
 			$rootScope.check3 = {};
 			
+			// GET GROUPS
+			$rootScope.Offices = [];
+			angular.forEach(r, function(value, key){
+				
+				if($rootScope.Offices.indexOf(value.office) == -1 && value.office) {
+					$rootScope.Offices.push(value.office);	
+				}
+			});
+			
 			if(!r.message) {$rootScope.adminDR = r;}							
 		});		 			
 	}
@@ -678,18 +1185,51 @@ app.service('admin', function($http, $rootScope, $timeout, $interval, $timeout) 
 	{	
 		httpGet('getServices').success(function(r){
 			$rootScope.adminServices = [];
-			$rootScope.check2 = {};
+			$rootScope.checkItem = {};
 			
 			if(!r.message) {$rootScope.adminServices = r;}							
 		});		 			
 	}
+	
+	var adminGroups = function()
+	{	
+		httpGet('getGroups').success(function(r){
+			$rootScope.adminGroups = [];
+			$rootScope.checkGroups = {};
+			
+			if(!r.message) {$rootScope.adminGroups = r;}							
+		});		 			
+	}
+	
+	var adminOffices = function()
+	{	
+		httpGet('getOffices').success(function(r){
+			$rootScope.adminOffices = [];
+			$rootScope.checkOffices = {};
+			
+			if(!r.message) {$rootScope.adminOffices = r;}							
+		});		 			
+	}
+	
+	
 	// GET USERS
 	var adminUsers = function()
 	{	
 		httpGet('getUsers').success(function(r){
 			$rootScope.adminUsers = [];
 			$rootScope.check1 = {};
-			if(!r.message) {$rootScope.adminUsers = r;}							
+			if(!r.message) {
+				$rootScope.adminUsers = r;
+				
+				// GET GROUPS
+				$rootScope.Groups = [];
+				angular.forEach(r, function(value, key){
+					
+					if($rootScope.Groups.indexOf(value.group) == -1 && value.group) {
+						$rootScope.Groups.push(value.group);	
+					}
+				});
+			}							
 		});		 			
 	}
 	
@@ -713,10 +1253,6 @@ app.service('admin', function($http, $rootScope, $timeout, $interval, $timeout) 
 		HttpPost('addUser', json).then(function(r){			
 			showMsg(r.data, u);
 			adminUsers();
-		}, 
-		function(r){
-			showMsg('ERROR', u);
-			adminUsers();
 		});	
 	};
 	
@@ -725,10 +1261,6 @@ app.service('admin', function($http, $rootScope, $timeout, $interval, $timeout) 
 		var json = {'users': u};
 		HttpPost('deleteUsers', json).then(function(r){			
 			showMsg(r.data, u);
-			adminUsers();
-		}, 
-		function(r){
-			showMsg('ERROR', u);
 			adminUsers();
 		});	
 	};
@@ -739,10 +1271,6 @@ app.service('admin', function($http, $rootScope, $timeout, $interval, $timeout) 
 		HttpPost('changeAccess', json).then(function(r){			
 			showMsg(r.data, a);
 			adminUsers();			
-		}, 
-		function(r){
-			showMsg('ERROR', u);
-			adminUsers();
 		});	
 	};
 	
@@ -752,50 +1280,52 @@ app.service('admin', function($http, $rootScope, $timeout, $interval, $timeout) 
 		HttpPost('changePassword', json).then(function(r){			
 			showMsg(r.data, u.length);
 			adminUsers();			
-		}, 
-		function(r){
-			showMsg('ERROR', u);
-			adminUsers();
 		});	
 	};
 	
+	var adminAssignGroup = function(u, grp){
+		
+		var json = {'users': u, 'grp': grp};
+		HttpPost('assignNewGroup', json).then(function(r){			
+			
+			showMsg(r.data, u.length);
+			adminUsers();			
+		});	
+	};
+			
+	
 	// SERVICES
 	
-	var adminServiceAdd = function(s){
-		var json = {'name': s};
-		HttpPost('serviceAdd', json).then(function(r){			
+	var adminItemAdd = function(item, s){
+		var json = {'name': s, 'item': item};
+		HttpPost('itemAdd', json).then(function(r){			
 			showMsg(r.data, s);
-			adminServices();			
-		}, 
-		function(r){
-			showMsg('ERROR', u);
-			adminServices();
+			
+			if(item == 'services') {adminServices();}			
+			if(item == 'offices') {adminOffices();}			
+			if(item == 'groups') {adminGroups();}			
 		});
 	};
 	
-	var adminServiceDelete = function(s){
-		var json = {'names': s};
-		HttpPost('serviceDelete', json).then(function(r){			
+	var adminItemDelete = function(s, item){
+		var json = {'names': s, 'item': item};
+		HttpPost('itemDelete', json).then(function(r){			
 			showMsg(r.data, s.length);
 			
-			adminServices();			
-		}, 
-		function(r){
-			showMsg('ERROR');
-			adminServices();
+			if(item == 'services') {adminServices();}			
+			if(item == 'offices') {adminOffices();}			
+			if(item == 'groups') {adminGroups();}	
 		});
 	};
 	
-	var adminServiceDisable = function(s, d) {
-		var json = {'names': s, 'status': d};
-		HttpPost('serviceDisable', json).then(function(r){			
+	var adminItemDisable = function(s, d, item) {
+		var json = {'names': s, 'status': d, 'item': item};
+		HttpPost('itemDisable', json).then(function(r){			
 			showMsg(r.data, d);
 			
-			adminServices();			
-		}, 
-		function(r){
-			showMsg('ERROR');
-			adminServices();
+			if(item == 'services') {adminServices();}			
+			if(item == 'offices') {adminOffices();}			
+			if(item == 'groups') {adminGroups();}			
 		});
 	}
 	
@@ -806,10 +1336,6 @@ app.service('admin', function($http, $rootScope, $timeout, $interval, $timeout) 
 		HttpPost('globalChangeParam', json).then(function(r){			
 			showMsg(r.data);			
 			adminGlobal();			
-		}, 
-		function(r){
-			showMsg('ERROR');
-			adminGlobal();
 		});		
 	};
 	
@@ -819,27 +1345,68 @@ app.service('admin', function($http, $rootScope, $timeout, $interval, $timeout) 
 		HttpPost('sendEmail', json).then(function(r){
 			console.log(r.data)
 			adminGlobal();			
-		}, 
-		function(r){
-			showMsg('ERROR');
-			adminGlobal();
 		});		
 	};
 	
 	// NODE
-	
+		
 	var adminNodesDisable = function(s, d) {
 		var json = {'ip': s, 'status': d};
 		HttpPost('nodesDisable', json).then(function(r){			
 			showMsg(r.data, d);
 			
 			adminDR();			
-		}, 
-		function(r){
-			showMsg('ERROR');
-			adminDR();
 		});
 	}
+	
+	var adminNodesAutoStartSrv = function(s, d) {
+		var json = {'ip': s, 'status': d};
+		HttpPost('nodesSrvAutoStart', json).then(function(r){			
+			showMsg(r.data, d);
+			
+			adminDR();			
+		});
+	}
+	
+	var adminAssignNodeGroup = function(s, grp){
+		
+		var json = {'ip': s, 'grp': grp};
+		HttpPost('adminAssignNodeGroup', json).then(function(r){			
+			console.log(r.data)
+			showMsg(r.data, s.length);
+			adminDR();			
+		});	
+	};
+	
+	var adminAssignNodeOffice = function(s, office){
+		
+		var json = {'ip': s, 'office': office};
+		HttpPost('adminAssignNodeOffice', json).then(function(r){			
+			console.log(r.data)
+			showMsg(r.data, s.length);
+			adminDR();			
+		});	
+	};
+	
+	var adminNodesPower = function(s, type, val){
+		
+		var json = {'ip': s, 'type': type, 'val': val};
+		HttpPost('adminNodesPower', json).then(function(r){			
+			console.log(r.data)
+			showMsg(r.data, s.length);
+			adminDR();			
+		});	
+	};
+	
+	var adminNodesDescription = function(s, desc){
+		
+		var json = {'ip': s, 'desc': desc};
+		HttpPost('adminNodesDescription', json).then(function(r){			
+			console.log(r.data)
+			showMsg(r.data, s.length);
+			adminDR();			
+		});	
+	};
 	
 	var adminNodeDelete = function(s){
 		var json = {'ip': s};
@@ -847,10 +1414,6 @@ app.service('admin', function($http, $rootScope, $timeout, $interval, $timeout) 
 			showMsg(r.data, s.length);
 						
 			adminDR();			
-		}, 
-		function(r){
-			showMsg('ERROR');
-			adminDR();
 		});
 	};
 	
@@ -887,19 +1450,27 @@ app.service('admin', function($http, $rootScope, $timeout, $interval, $timeout) 
 		adminDeleteUsers: adminDeleteUsers,
 		adminChangeAccess: adminChangeAccess,
 		adminChangePassword: adminChangePassword,
-		adminServiceAdd: adminServiceAdd,
-		adminServiceDelete: adminServiceDelete,
-		adminServiceDisable: adminServiceDisable,
+		adminItemAdd: adminItemAdd,
+		adminItemDelete: adminItemDelete,
+		adminItemDisable: adminItemDisable,
 		adminGlobalChangeParam: adminGlobalChangeParam,
 		adminSendEmail: adminSendEmail,
 		adminNodesDisable: adminNodesDisable,
 		adminNodeDelete: adminNodeDelete,
-		sendCmd: sendCmd
+		sendCmd: sendCmd,
+		adminAssignGroup: adminAssignGroup,
+		adminAssignNodeGroup: adminAssignNodeGroup,
+		adminAssignNodeOffice: adminAssignNodeOffice,
+		adminGroups: adminGroups,
+		adminOffices: adminOffices,
+		adminNodesDescription: adminNodesDescription,
+		adminNodesAutoStartSrv: adminNodesAutoStartSrv,
+		adminNodesPower: adminNodesPower
 	};
 });
 
 
-app.service('vault', function($http, $rootScope, $timeout, $interval, admin) {
+app.service('vault', function($http, $rootScope, $timeout, $interval, admin, $routeParams) {
 	// MESSAGES
 	var showMsg = function(r, p)
 	{
@@ -1048,13 +1619,75 @@ app.service('vault', function($http, $rootScope, $timeout, $interval, admin) {
 		}
 	}
 	
+	var getStatistic = function(period, dt, office_filter)
+	{
+		var json = {'page': 'main', 'period': period, 'dt': dt, 'office': office_filter};
+		HttpPost('getStatistic', json).then(function(r){			
+			
+			$timeout(function(){
+				$rootScope.statistic = r.data;
+				
+				$rootScope.labelsMonthRenderTime = [];
+				$rootScope.dataMonthRenderTime = [];
+				if(r.data.rendertime) {
+					$rootScope.dataMonthRenderTime = [r.data.rendertime.data];
+					$rootScope.labelsMonthRenderTime = r.data.rendertime.label;
+				}
+				
+				$rootScope.dataUserEmpl = [];
+				$rootScope.labelsUserEmpl = [];
+				if(r.data.renderbyuser) {
+					$rootScope.dataUserEmpl = r.data.renderbyuser.data;
+					$rootScope.labelsUserEmpl = r.data.renderbyuser.label;
+				}
+				
+				$rootScope.dataFarmEmpl = [];
+				$rootScope.labelsFarmEmpl = [];
+				if(r.data.rendertime && r.data.rendertime.empl) {
+					$rootScope.dataFarmEmpl = r.data.rendertime.empl.data;
+					$rootScope.labelsFarmEmpl = r.data.rendertime.empl.label;
+				}
+				
+				$rootScope.dataFarmPowerEmpl = [];
+				$rootScope.labelsFarmPowerEmpl = [];
+				if(r.data.rendertime && r.data.rendertime.power) {
+					$rootScope.dataFarmPowerEmpl = r.data.rendertime.power.data;
+					$rootScope.labelsFarmPowerEmpl = r.data.rendertime.power.label;
+				}
+				
+				if(r.data.rendertime && r.data.rendertime.bynode) {
+					$rootScope.dataFarmByNodeEmpl = r.data.rendertime.bynode;
+				}
+				
+				$rootScope.dataRenderOffice = [];
+				$rootScope.labelsRenderOffice = [];		
+				//$rootScope.labelsColorsRenderOffice = [];
+				if(r.data.rendbyoffice) {
+					$rootScope.dataRenderOffice = r.data.rendbyoffice.data;
+					$rootScope.labelsRenderOffice = r.data.rendbyoffice.label;
+					/*angular.forEach($rootScope.labelsRenderOffice, function(item, key) {
+						var c = $rootScope.stringToColour(item);
+						$rootScope.labelsColorsRenderOffice.push(c);
+					});*/
+				}
+				
+				
+				$rootScope.dataFarmUsage = [r.data.farmrender, r.data.farmidle];
+				$rootScope.labelsFarmUsage = ['Rendering Nodes (' + r.data.farmusage + '%)', 'Stand Idle (' + r.data.farmunused + '%)'];
+				console.log(r.data)
+			}, 50);
+		});		
+	}
+	
 	// GET DR
 	var getDR = function(mailType)
 	{	
 		$rootScope.oldNodes = $rootScope.reservedDrNames;
-	
-		httpGet('getDR').success(function(r){
-			$rootScope.dr = r;
+		
+		var json = {'office': $routeParams.office};	
+		HttpPost('getDR', json).then(function(r){
+			//console.log(r.data);
+			$rootScope.dr = r.data;
 			$rootScope.reservedDr = [];
 			$rootScope.reservedDrNames = [];
 			$rootScope.otherUsers = [];
@@ -1062,7 +1695,7 @@ app.service('vault', function($http, $rootScope, $timeout, $interval, admin) {
 			
 			var runninSrv = [];
 			
-			angular.forEach(r, function(value, key){
+			angular.forEach(r.data, function(value, key){
 				//if(value.user != null) {$rootScope.checkModel[value.ip] = false;}	
 				
 				if(value.user != '' && value.user != null && $rootScope.otherUsers.indexOf(value.user) == -1) {$rootScope.otherUsers.push(value.user);}
@@ -1087,6 +1720,31 @@ app.service('vault', function($http, $rootScope, $timeout, $interval, admin) {
 		});		 			
 	}
 	
+	var getNodeInfo = function(ip) {
+		var json = {'ip': ip};	
+		$rootScope.showNodeInfo = false;
+		$rootScope.nodeInfo = {};
+		
+		HttpPost('getNodeInfo', json).then(function(r){
+			
+			$rootScope.showNodeInfo = true;
+			$rootScope.nodeInfo = r.data;
+			showMsg(r.data);															
+		}, 
+		function(r){			
+			console.log(r);
+		});
+	}
+	
+	var getOffices = function()
+	{	
+		httpGet('getOffices').success(function(r){
+							
+			if(!r.message) {$rootScope.Offices = r;	}							
+		});		 			
+	}
+		
+		
 	// WORK WITH SOCKET
 	var socket = function(ip, cmd)
 	{
@@ -1365,6 +2023,7 @@ app.service('vault', function($http, $rootScope, $timeout, $interval, admin) {
 			//getDR();
 		});
 	}
+		
 	
 	// ADMIN COMMANDS
 	var adminDropNodes = function(u){
@@ -1401,7 +2060,10 @@ app.service('vault', function($http, $rootScope, $timeout, $interval, admin) {
 	getLastNodes: getLastNodes,
 	dropSelectedNodes: dropSelectedNodes,
 	kickSelectedNodes: kickSelectedNodes,
-	sendCmdForIps: sendCmdForIps
+	sendCmdForIps: sendCmdForIps,
+	getOffices: getOffices,
+	getNodeInfo: getNodeInfo,
+	getStatistic: getStatistic
   };
 
 });

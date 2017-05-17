@@ -1,0 +1,105 @@
+<div class="light-box"  ng-show="showNodeInfo">
+	<div class="close" ng-click="hideShowNodeInfo(false)" title="Close"></div>
+	<span class="light-box-close glyphicon glyphicon-remove" aria-hidden="true" ng-click="hideShowNodeInfo(false)" title="Close"></span>	
+
+	<div class="node-info col-lg-8 col-md-10 col-sm-10 col-xs-12" ng-click="hideShowNodeInfo(false)">
+		<div ng-show="!nodeInfo.ip" class="text-center">No node info...</div>		
+		<h3 class="text-uppercase">{{nodeInfo.name}}</h3>
+		<hr ng-show="nodeInfo.ip">
+		
+		<div ng-show="nodeInfo.desc" class="alert alert-info"><span class="glyphicon glyphicon-info-sign" aria-hidden="true"></span> {{nodeInfo.desc}}</div>
+		
+		<table border="0" cellspacing="0" cellpadding="5" width="100%" ng-show="nodeInfo.ip">
+	<tbody>
+		<tr ng-show="nodeInfo.cpudata">
+			<td width="25%"><strong>CPU</strong>:</td>
+			<td>{{nodeInfo.cpudata}} @ x{{nodeInfo.cpunumber}} Cores</td>
+			<td></td>
+		</tr>
+		<tr>
+			<td><strong>CPU USAGE</strong>:</td>
+			<td>
+				<div class="progress">
+				  <div class="progress-bar progress-bar-striped active" ng-class="{'progress-bar-success': nodeInfo.cpu >= 0, 'progress-bar-danger': nodeInfo.cpu > 60}" role="progressbar"
+				  aria-valuemin="0" aria-valuemax="100" ng-style="{'width': nodeInfo.cpu + '%'}">
+					
+				  </div>
+				</div>
+			</td>
+			<td>{{nodeInfo.cpu}}%</td>
+		</tr>
+		<tr ng-show="nodeInfo.ram != 'Unknown'">
+			<td><strong>RAM</strong>:</td>
+			<td>			
+				<div class="progress">
+				  <div class="progress-bar progress-bar-striped active" role="progressbar" 
+				  aria-valuemin="0" aria-valuemax="100" ng-style="{'width': nodeInfo.ramusage + '%'}">
+					
+				  </div>
+				</div>
+			</td>
+			<td>{{nodeInfo.ram}}</td>
+		</tr>
+		<tr>
+			<td><strong>IP</strong>:</td>
+			<td>{{nodeInfo.ip}}</td>
+			<td></td>
+		</tr>
+		<tr>
+			<td><strong>JOB</strong>:</td>
+			<td>{{nodeInfo.job ? nodeInfo.job : 'N/A'}}</td>
+			<td></td>
+		</tr>
+		<tr>
+			<td><strong>USER</strong>:</td>
+			<td>{{nodeInfo.user ? nodeInfo.user : 'N/A'}}</td>
+			<td></td>
+		</tr>
+		<tr>
+			<td><strong>STATUS</strong>:</td>
+			<td>
+				<span class="label label-success" ng-show="nodeInfo.status==0">Enabled</span>
+				<span class="label label-danger" ng-show="nodeInfo.status!=0">Enabled</span>
+			</td>
+			<td></td>
+		</tr>
+		<tr>
+			<td><strong>BACKBURNER AUTOSTART</strong>:</td>
+			<td>
+				<span class="label label-success" ng-show="nodeInfo.srvautostart==1">Yes</span>
+				<span class="label label-danger" ng-show="nodeInfo.srvautostart!=1">No</span>
+			</td>
+			<td></td>
+		</tr>
+		<tr>
+			<td><strong>RUNNING SERVICE</strong>:</td>
+			<td>{{nodeInfo.services ? nodeInfo.services : 'N/A'}}</td>
+			<td></td>
+		</tr>
+		<tr>
+			<td><strong>INSTALLED SERVICES</strong>:</td>
+			<td style="font-size: 9px;">{{nodeInfo.installedsrv}}</td>
+			<td></td>
+		</tr>
+		<tr>
+			<td><strong>FREE</strong>:</td>
+			<td>
+				<span class="label label-success" ng-show="!nodeInfo.user.length && nodeInfo.cpu <= 60">Yes</span>
+				<span class="label label-danger" ng-show="nodeInfo.user.length || nodeInfo.cpu > 60">No</span>
+			</td>
+			<td></td>
+		</tr>		
+		<tr ng-show="nodeInfo.group">
+			<td><strong>GROUP</strong>:</td>
+			<td><span class="label" ng-style="{'background-color': stringToColour(nodeInfo.group)}">{{nodeInfo.group}}</span></td>
+			<td></td>
+		</tr>
+		<tr ng-show="nodeInfo.office">
+			<td><strong>OFFICE</strong>:</td>
+			<td><span class="label" ng-style="{'background-color': stringToColour(nodeInfo.office)}">{{nodeInfo.office}}</span></td>
+			<td></td>
+		</tr>		
+	</tbody>
+</table>
+	</div>
+</div>

@@ -5,7 +5,17 @@ global _DR_INI = _DR_PATH + "settings.ini"
 global _DR_START = "DR_STARTUP.ms"
 global _DR_STARTUP = _DR_PATH + _DR_START
 global _DR_INSTALLED_STARTUP = (getDir #startupScripts) + @"\" + _DR_START
+global forceRefresh
 
+fn forceRefresh = 
+(
+	for i in 1 to 10 do
+	(
+		_DR.WebBrowser.refresh()
+		_DR.WebBrowser.refresh (dotnetclass "System.Windows.Forms.WebBrowserRefreshOption").Completely
+	)
+)	
+	
 rollout _DR "Distributed Rendering Settings" 
 (
 	dotNetControl WebBrowser2 "System.Windows.Forms.WebBrowser" pos:[-1,-1] width:0 height:0
@@ -38,7 +48,7 @@ rollout _DR "Distributed Rendering Settings"
 	fn getInt i = if(i != undefined and i != "0" and i != "") then return i as integer else return 0
 	fn getFloat  f = if(f != undefined  and f != "") then return f as float else return 100.0
 	fn boolToString b = if(b) then return "1" else return "0"
-
+	
 	fn drSettings t:#get =
 	(
 		u = getUser()

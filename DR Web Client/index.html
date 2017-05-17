@@ -14,10 +14,14 @@
 	<script type="text/javascript" src="js/angular.min.js"></script>
 	<script type="text/javascript" src="js/angular-route.min.js"></script>    
 	<script type="text/javascript" src="js/angular-sanitize.min.js"></script>              
+	<script type="text/javascript" src="js/angular-animate.min.js"></script>              
 	<script type="text/javascript" src="js/app.js"></script>
 	<script type="text/javascript" src="js/jquery-latest.js"></script>    
     <script type="text/javascript" src="js/bootstrap.min.js"></script>
-	<script type="text/javascript" src="js/ui-bootstrap-tpls-2.1.3.min.js"></script>	
+	<script type="text/javascript" src="js/ui-bootstrap-tpls-2.1.3.min.js"></script>
+	<script type="text/javascript" src="js/chart/Chart.min.js"></script>
+	<script type="text/javascript" src="js/angular-chart.min.js"></script>	
+	<script type="text/javascript" src="js/angular-counter.min.js"></script>	
     <link href="css/bootstrap.css" rel="stylesheet" type="text/css">
 	<link href="css/template.css" rel="stylesheet" type="text/css">
     <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
@@ -29,33 +33,29 @@
 </head>
 
 <body>
-
 <div class="header">
-<div class="container">
-<div class="navbar-header">
-			<button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar3"> <span class="sr-only">Toggle navigation</span> 
-						<span class="glyphicon glyphicon-menu-hamburger menu-icon"></span>					
-			</button>
-        <a href="#/"><img src="img/visco_logo.svg" class="logo"></a>  <span class="head-title  hidden-xs">Render Farm Manager</span>
-      </div>
-	<div id="navbar3" class="navbar-collapse collapse">
-        <ul class="nav navbar-nav navbar-right">
-          <li class="active"><a href="#/">Home</a></li>
-		  <li class="active" ng-show="userInfo.admin"><a href="#/admin">Admin</a></li>
-          <li><a href="#/about">About</a></li>
-		  <li><a href="" ng-show="!userInfo.logged && userInfo.browser != 'MXS'" ng-click="logIn()"><span class="glyphicon glyphicon-log-in"></span> Log In</a></li>
-          <li class="dropdown" ng-show="userInfo.logged && userInfo.browser != 'MXS'">
-            <a href="" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">User <span class="caret"></span></a>
-            <ul class="dropdown-menu" role="menu">
-              <li class="dropdown-header">Hi <span ng-show="userInfo.admin">admin</span>, {{userInfo.user}}</li>
-			   <li class="divider"></li>
-			  <li><a href="" ng-click="logOut()"><span class="glyphicon glyphicon-log-out"></span> Log Out</a></li>         
-            </ul>
-          </li>
-        </ul>
-      </div>
-	 </div>
-	</div>	
+	<div class="container">
+		<div class="padding-0-15">
+			<div class="navbar-header"> <a href="#/"><img src="visco_logo.svg" class="logo"></a> <span class="head-title hidden-xs">Render Farm Manager <sup>BETA</sup></span> </div>
+			<div id="navbar3" class="navbar-default">
+				<ul class="nav nav-buttons margin-left-minus-15-xxs">					
+					<li class="hidden-xs"><a href="#/" uib-tooltip="Home" tooltip-placement="bottom"><span class="glyphicon glyphicon-home"></span></a></li>															
+					<li class="dropdown" ng-show="userInfo.logged"> <a href="" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false" ><span class="glyphicon glyphicon-cog"></span></a>
+						<ul class="dropdown-menu dropdown-menu-right" role="menu" >
+							<li class="dropdown-header">Hi, {{userInfo.name || userInfo.user}}</li>
+							<li class="divider"></li>
+							<li ng-show="userInfo.admin"><a href="#/admin/global">Admin Panel</a></li>	
+							<li><a href="#/statistic/main">Statistics</a></li>	
+							<li><a href="#/about">About</a></li>							
+						</ul>
+					</li>
+					<li class="" ng-show="userInfo.browser != 'MXS'"><a href="" ng-click="logOut()" uib-tooltip="Logout" tooltip-placement="bottom"><span class="glyphicon glyphicon-log-out"></span></a></li>
+				</ul>
+			</div>
+		</div>
+	</div>
+</div>
+<br>
     <div class="container">
 	
 		<div ng-show="userInfo.error" class="alert alert-danger alert-dismissible fade in" role="alert">

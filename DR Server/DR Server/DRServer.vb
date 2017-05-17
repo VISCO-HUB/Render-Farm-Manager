@@ -1,9 +1,12 @@
-﻿Imports System.Net
+﻿Imports System
+Imports System.Net
 Imports System.Net.Sockets
 Imports System.Text
 Imports System.Threading
 Imports System.IO
 Imports System.ServiceProcess
+Imports System.Text.RegularExpressions
+
 Imports System.Timers
 Public Class clsIni
     ' API functions
@@ -97,6 +100,7 @@ Public Class clsIni
         FlushPrivateProfileString(0, 0, 0, strFilename)
     End Sub
 End Class
+
 Module DRServer
 
     Const port As Integer = 55001
@@ -105,15 +109,33 @@ Module DRServer
     Dim serviceStatus As String
     Dim sep As String = "------------------------------------------------------"
     Dim cpuLoad As String = 0
+    Dim cpuLoad3dmax As String = 0
     Dim cpuCount As Int16 = 0
     Dim busyCnt As Int16 = 0
     Dim BACKBURNERSRV As String = ""
     Dim UPDATERATE As Int32 = 3
+    Dim DEBUG As Int32 = 0
+    Dim cpuNumber As Int32 = Convert.ToInt32(Environment.ProcessorCount.ToString)
+
     Dim objIniFile As New clsIni(System.AppDomain.CurrentDomain.BaseDirectory + "\settings.ini")
     Dim URL As String = String.Empty
     Dim servicesList As String = String.Empty
 
-    Dim cpuUsage = New PerformanceCounter("Processor", "% Processor Time", "_Total")
+    Dim cpuUsage As New System.Diagnostics.PerformanceCounter("Processor", "% Processor Time", "_Total")
+    Dim cpuUsage3dmax As New System.Diagnostics.PerformanceCounter("Process", "% Processor Time", "3dsmax")
+
+    Class Log
+        Public Shared Sub Write(logMessage As String)
+            DEBUG = objIniFile.GetInteger("MAIN", "DEBUG", 0)
+
+            If (DEBUG = 1) Then
+                Using w As StreamWriter = File.AppendText("log/" & (DateTime.Now.ToString("yyyy-MM-dd")) & ".txt")
+                    w.WriteLine("{0} [DR SERVER] >  {1}", DateTime.Now.ToLocalTime(), logMessage)
+                End Using
+            End If
+        End Sub
+    End Class
+
     Private Function sendWebRequest(url As String, Data As String)
         Dim request As HttpWebRequest = DirectCast(WebRequest.Create(url), HttpWebRequest)
 
@@ -152,15 +174,25 @@ Module DRServer
         Dim resp As String = "ERROR"
         Try
             resp = New System.Net.WebClient().DownloadString(url)
+            Log.Write("WEB REQUEST: " & url)
         Catch
         End Try
-
+        Log.Write("WEB REQUEST RESPONCE: " & resp)
         Return resp
     End Function
     Public Function GetComputerName() As String
         Dim ComputerName As String
         ComputerName = System.Net.Dns.GetHostName
         Return ComputerName
+    End Function
+    Public Function GetCpuData() As String
+
+        Dim s As String = CreateObject("WScript.Shell").RegRead("HKEY_LOCAL_MACHINE\HARDWARE\DESCRIPTION\System\CentralProcessor\0\ProcessorNameString")
+        s = Regex.Replace(s, "[^a-z0-9@\s\(\)-.]", "", RegexOptions.IgnoreCase)
+        s = s.Replace("\n", "")
+        s = s.Replace("  ", "")
+        Return s
+
     End Function
     Public Function GetComputerIP() As String
         Dim GetIPv4Address As String = String.Empty
@@ -174,6 +206,12 @@ Module DRServer
         Next
 
         Return GetIPv4Address
+    End Function
+    Public Function GetRam() As String
+        Return (System.Math.Round(My.Computer.Info.TotalPhysicalMemory / (1024 * 1024 * 1024), 1)).ToString()
+    End Function
+    Public Function GetFreeRam() As String
+        Return (System.Math.Round(My.Computer.Info.AvailablePhysicalMemory / (1024 * 1024 * 1024), 1)).ToString()
     End Function
     Private Function getServicesList() As String
 
@@ -202,7 +240,7 @@ Module DRServer
         Return services
     End Function
     Public Function insertData()
-        Dim getString As String = "ip=" & GetComputerIP() & "&name=" & GetComputerName()        
+        Dim getString As String = "ip=" & GetComputerIP() & "&name=" & GetComputerName() & "&ram=" & GetRam()
         Return sendWebGetReques(URL & "exeInsertData1.php?" & getString)
     End Function
     Public Function getUser()
@@ -213,14 +251,16 @@ Module DRServer
         Dim r As String = sendWebGetReques(URL & "exeGetGlobal.php?ip=" & GetComputerIP())
 
         Dim s As String() = r.Split(New Char() {"|"c})
-        Dim o(2) As Int64
+        Dim o(3) As Int64
         o(0) = If(s(0) = "1", 1, 0)
         o(1) = If(s(1) IsNot "", s(1), 120)
         o(2) = If(s(2) = "0", 0, 1)
+        o(3) = If(s(3) = "0", 0, 1)
         Return o
     End Function
     Public Function dropNode()
         Dim getString As String = "ip=" & GetComputerIP()
+
         Return sendWebGetReques(URL & "exeDropNode.php?" & getString)
     End Function
     Public Function setData(Optional ByVal isBackBurener As Int16 = 0)
@@ -232,13 +272,13 @@ Module DRServer
 
         'Dim Data As String = "{""ip"":""" & GetComputerIP() & """, ""name"":""" & GetComputerName() & """, ""cpu"":""" & cpuLoad & """, ""service"":""" & serviceStatus & """, ""user"":""" & user & """}"
 
-        Dim getString As String = "ip=" & GetComputerIP() & "&name=" & GetComputerName() & "&cpu=" & cpuLoad & "&service=""" & serviceStatus & """" & "&user=" & user
+        Dim getString As String = "ip=" & GetComputerIP() & "&name=" & GetComputerName() & "&cpu=" & cpuLoad3dmax & "&3dsmax=" & cpuLoad3dmax & "&cpunumber=" & cpuNumber & "&service=""" & serviceStatus & """" & "&user=" & user & "&ram=" & GetRam() & "&aram=" & GetFreeRam() & "&cpudata=""" & GetCpuData() & """"
 
         Return sendWebGetReques(URL & "exeSetData1.php?" & getString)
         'Return sendWebRequest(URL & "exeSetData.php", Data)
     End Function
 
-    Public Sub stopAllServices()
+    Public Sub stopAllServices(Optional ByVal closeMax As Int16 = 1)
         Dim sevices As ArrayList = getServices()
 
         sevices.Add(BACKBURNERSRV)
@@ -265,16 +305,17 @@ Module DRServer
             Next
         Next
 
-        ' Kill 3Ds Max
-        For Each prog As Process In Process.GetProcesses
-            If prog.ProcessName = "3dsmax" Then
-                Try
-                    prog.Kill()
-                Catch
-                End Try
-            End If
-        Next
-
+        If (closeMax = 1) Then
+            ' Kill 3Ds Max
+            For Each prog As Process In Process.GetProcesses
+                If prog.ProcessName = "3dsmax" Then
+                    Try
+                        prog.Kill()
+                    Catch
+                    End Try
+                End If
+            Next
+        End If
     End Sub
     Private Function startService(ByVal name As String) As String
         stopAllServices()
@@ -346,28 +387,35 @@ Module DRServer
                     Case "STARTSERVICE"
                         busyCnt = 0
                         Console.WriteLine("START SERVICE: {1}", cmds)
+                        Log.Write("START SERVICE: " & cmds(1))
                         mstrResponse = startService(cmds(1))
                         setData()
                     Case "STOPSERVICE"
                         Console.WriteLine("STOP SERVICE: {1}", cmds)
+                        Log.Write("STOP SERVICE: " & cmds(1))
                         mstrResponse = stopService(cmds(1))
                     Case "STOPSERVICES"
                         Console.WriteLine("STOP ALL SERVICES")
+                        Log.Write("STOP ALL SERVICES")
                         stopAllServices()
                         mstrResponse = "OK"
                     Case "CHALLANGE"
                         Console.WriteLine("CHALLANGE")
+                        Log.Write("CHALLANGE")
                         mstrResponse = setData()
                     Case "DROP"
                         mstrResponse = dropNode()
                         setData()
                         Console.WriteLine("DROPNODE")
+                        Log.Write("DROPNODE")
                     Case "REBOOT"
                         Console.WriteLine("REBOOT")
+                        Log.Write("REBOOT")
                         setData()
                         mstrResponse = rebootNode()
                     Case "EXIT"
                         Console.WriteLine("EXIT")
+                        Log.Write("EXIT")
                         Environment.Exit(0)
                         mstrResponse = "OK"
                 End Select
@@ -416,6 +464,7 @@ Module DRServer
             Dim helper As New SocketHelper()
             Dim ID As String = CType(tcpClient.Client.RemoteEndPoint, IPEndPoint).ToString()
             Console.WriteLine("CLIENT CONNECTED: {0}", ID)
+            Log.Write("CLIENT CONNECTED: " & ID)
             helper.processMsg(tcpClient, stream, bytes)
             tcpClient.Close()
 
@@ -427,7 +476,18 @@ Module DRServer
     WithEvents setDataTimer As New System.Timers.Timer
     Private Sub tick(ByVal sender As Object, ByVal e As System.Timers.ElapsedEventArgs) Handles cpuTimer.Elapsed
         If cpuCount = 1 Then
-            cpuLoad = Int(cpuUsage.NextValue().ToString).ToString
+            Try
+                cpuLoad = Int(cpuUsage.NextValue().ToString).ToString
+            Catch
+                cpuLoad = "0"
+            End Try
+
+            Try
+                cpuLoad3dmax = (Int(cpuUsage3dmax.NextValue() / cpuNumber)).ToString
+            Catch
+                cpuLoad3dmax = "0"
+            End Try
+
             cpuCount = 0
         Else
             cpuCount += 1
@@ -463,10 +523,17 @@ Module DRServer
 
             If (globalSettings(0) = 1 And globalSettings(2) = 0) Then
                 Dim user As String = getUser()
-                If Int(cpuLoad) < 60 Then ' If Free
+                If Int(cpuLoad3dmax) < 2 Then ' If Free
 
                     If busyCnt >= globalSettings(1) Or user = "null" Then
-                        startBackBurner()
+                        If globalSettings(3) = 1 Then
+                            startBackBurner()
+                        Else
+                            stopAllServices(0)
+                        End If
+
+                        Log.Write("SET NODE IN FREE (" & busyCnt.ToString() & " >= " & globalSettings(1).ToString() & " USER: " & user & ")")
+
                         dropNode()
                         busyCnt = 0
                     End If
@@ -497,7 +564,6 @@ Module DRServer
         ' SET FIRST INFO
         insertData()
 
-
         globalSettings = getGlobal()
         getServicesList()
 
@@ -521,11 +587,34 @@ Module DRServer
         Console.WriteLine("SET BACKBURNER SERVICE: " & BACKBURNERSRV)
         Console.WriteLine("SET BUSYTIME: " & globalSettings(1) & " MIN")
         Console.WriteLine("SET UPDATERATE: " & UPDATERATE & " SEC")
+        Console.WriteLine("AUTO START BACKBURNER: " & (If(globalSettings(3) = 1, "YES", "NO")))
         Console.WriteLine("GET SERVICE LIST: " & servicesList)
-        Console.WriteLine("SERVICE IS: " & (If(globalSettings(0) = 1, "ONLINE", "OFFLINE")))
+        Console.WriteLine("WEB SERVICE IS: " & (If(globalSettings(0) = 1, "ONLINE", "OFFLINE")))
         Console.WriteLine("NODE STATUS IS: " & (If(globalSettings(2) = 0, "ONLINE", "OFFLINE")))
         Console.WriteLine("NODE IP: " & GetComputerIP())
+        Console.WriteLine("NODE CPU: " & GetCpuData())
+        Console.WriteLine("NODE RAM: " & GetRam() & " GB")
+        Console.WriteLine("NODE AVAILABLE RAM: " & GetFreeRam() & " GB")
         Console.WriteLine("")
+
+        Log.Write("-------------------")
+        Log.Write("RUN SERVICE")
+        Log.Write("-------------------")
+        Log.Write("SET REMOTE URL: " & URL)
+        Log.Write("SET BACKBURNER SERVICE: " & BACKBURNERSRV)
+        Log.Write("SET BUSYTIME: " & globalSettings(1) & " MIN")
+        Log.Write("SET UPDATERATE: " & UPDATERATE & " SEC")
+        Log.Write("AUTO START BACKBURNER: " & (If(globalSettings(3) = 1, "YES", "NO")))
+        Log.Write("GET SERVICE LIST: " & servicesList)
+        Log.Write("WEB SERVICE IS: " & (If(globalSettings(0) = 1, "ONLINE", "OFFLINE")))
+        Log.Write("NODE STATUS IS: " & (If(globalSettings(2) = 0, "ONLINE", "OFFLINE")))
+        Log.Write("NODE IP: " & GetComputerIP())
+        Log.Write("NODE CPU: " & GetCpuData())
+        Log.Write("NODE RAM: " & GetRam() & " GB")
+        Log.Write("NODE AVAILABLE RAM: " & GetFreeRam() & " GB")
+        Log.Write("-------------------")
+
+        insertData()
 
         ' SOCKET LISTENER
         createListener()

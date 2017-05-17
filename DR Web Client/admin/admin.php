@@ -12,7 +12,7 @@
 	{
 		$MYSQLI = mysqliConnect();
 	
-		IF($MYSQLI->connect_errno) {
+		IF(!$MYSQLI) {
 			DIE('{"message": "ERROR"}');
 		}
 		
@@ -22,6 +22,12 @@
 			BREAK;
 			
 			CASE 'getServices': ECHO adminGetServices($MYSQLI);
+			BREAK;
+			
+			CASE 'getGroups': ECHO adminGetGroups($MYSQLI);
+			BREAK;
+			
+			CASE 'getOffices': ECHO adminGetOffices($MYSQLI);
 			BREAK;
 			
 			CASE 'getUsers': ECHO adminGetUsers($MYSQLI);
@@ -39,13 +45,13 @@
 			CASE 'changePassword': ECHO adminChangePassword($MYSQLI, $DATA);
 			BREAK;
 			
-			CASE 'serviceAdd': ECHO adminServiceAdd($MYSQLI, $DATA);
+			CASE 'itemAdd': ECHO adminItemAdd($MYSQLI, $DATA);
 			BREAK;
 			
-			CASE 'serviceDelete': ECHO adminServiceDelete($MYSQLI, $DATA);
+			CASE 'itemDelete': ECHO adminItemDelete($MYSQLI, $DATA);
 			BREAK;
 			
-			CASE 'serviceDisable': ECHO adminServiceDisable($MYSQLI, $DATA);
+			CASE 'itemDisable': ECHO adminItemDisable($MYSQLI, $DATA);
 			BREAK;
 			
 			CASE 'getGlobal': ECHO adminGlobal($MYSQLI);
@@ -60,14 +66,32 @@
 			CASE 'nodesDisable': ECHO adminNodesDisable($MYSQLI, $DATA);
 			BREAK;
 			
+			CASE 'nodesSrvAutoStart': ECHO adminNodesSrvAutoStart($MYSQLI, $DATA);
+			BREAK;
+			
 			CASE 'nodeDelete': ECHO adminNodeDelete($MYSQLI, $DATA);
 			BREAK;
 			
 			CASE 'sendCmd': ECHO adminSendCmd($DATA);
 			BREAK;
+			
+			CASE 'assignNewGroup': ECHO assignNewGroup($MYSQLI, $DATA);
+			BREAK;
+			
+			CASE 'adminAssignNodeGroup': ECHO adminAssignNodeGroup($MYSQLI, $DATA);
+			BREAK;
+			
+			CASE 'adminNodesDescription': ECHO adminNodesDescription($MYSQLI, $DATA);
+			BREAK;
+			
+			CASE 'adminAssignNodeOffice': ECHO adminAssignNodeOffice($MYSQLI, $DATA);
+			BREAK;
+			
+			CASE 'adminNodesPower': ECHO adminNodesPower($MYSQLI, $DATA);
+			BREAK;
 		}
 
-		$MYSQLI->CLOSE();			
+		//$MYSQLI->CLOSE();			
 	}
 	ELSE
 	{

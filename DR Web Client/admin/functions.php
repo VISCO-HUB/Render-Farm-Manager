@@ -61,7 +61,7 @@
 		{				
 			$KEY = ARRAY_KEYS($VALUE)[0];
 			
-			$V[] = $KEY . "=" . "'" .$VALUE[$KEY] . "'";
+			$V[] = '`' . $KEY . '`' . "=" . "'" .$VALUE[$KEY] . "'";
 		}
 		
 		$W = [];
@@ -69,7 +69,7 @@
 		{				
 			$KEY = ARRAY_KEYS($VALUE)[0];
 			
-			$W[] = $KEY . "=" . "'" .$VALUE[$KEY] . "'";
+			$W[] = '`' . $KEY . '`' . "=" . "'" .$VALUE[$KEY] . "'";
 		}
 			
 		$QUERY = "UPDATE " . $TABLE . " SET " . IMPLODE(',', $V) . " WHERE " . IMPLODE(' OR ', $W) . ";";						
@@ -167,9 +167,7 @@
 		IF(!COUNT($EMAILS)) RETURN $ERROR;
 		
 		$MESSAGE = WORDWRAP($CONTENT, 70, "\r\n");
-		$SEND = MAIL(IMPLODE(',', $EMAILS), $SUBJECT , $MESSAGE, IMPLODE("\r\n", $HEADERS)); 
-		//$SEND = MAIL('v.lukyanenko@visco.no' , $MESSAGE, IMPLODE("\r\n", $HEADERS)); 
-		//$SEND = MAIL('lukuanenko@gmail.com', 'oi' ,'ny je'); 
+		$SEND = MAIL(IMPLODE(',', $EMAILS), $SUBJECT , $MESSAGE, IMPLODE("\r\n", $HEADERS));   
 		IF(!$SEND) RETURN $ERROR;
 		RETURN $SUCCESS;
 	}
@@ -180,9 +178,19 @@
 	
 	FUNCTION adminDR($MYSQLI)
 	{	
+		$POWER_REND_KW = $GLOBALS['POWER_REND_KW'];
+		$POWER_IDLE_KW = $GLOBALS['POWER_IDLE_KW'];
+	
 		$QUERY = "SELECT * FROM dr;";
 		
-		RETURN JSON_ENCODE(mysqliSelect($MYSQLI, $QUERY));
+		$NODES = mysqliSelect($MYSQLI, $QUERY);
+		
+		FOREACH($NODES AS $NODE) {
+			$NODE->rendkw = $NODE->rendkw ? $NODE->rendkw : $POWER_REND_KW;
+			$NODE->idlekw = $NODE->idlekw ? $NODE->idlekw : $POWER_IDLE_KW;
+		}
+		
+		RETURN JSON_ENCODE($NODES);
 	}
 	
 	FUNCTION adminNodesDisable($MYSQLI, $DATA)
@@ -210,6 +218,142 @@
 		IF(!$RESULT) RETURN $ERROR;
 		RETURN $SUCCESS;
 	}
+	
+	FUNCTION adminNodesSrvAutoStart($MYSQLI, $DATA)
+	{
+		$ERROR = '{"message": "ADMINSRVATUOSTARTSBAD"}'; 
+		$SUCCESS = '{"message": "ADMINSRVATUOSTARTSOK"}';
+		
+		IF(!ISSET($DATA->ip) OR !ISSET($DATA->status)) RETURN $ERROR;
+			
+		$STATUS = 0;		
+		
+		IF($DATA->status == true) $STATUS = 1;
+				
+		$WHERE =[];
+		$SET = [];
+		
+		FOREACH($DATA->ip AS $VALUE){
+						
+			$SET[] = ['srvautostart' => $STATUS];
+			$WHERE[] = ['ip' => Strip($VALUE)];
+		}
+				
+		$RESULT = mysqliUpdate($MYSQLI, 'dr', $SET, $WHERE);
+		
+		IF(!$RESULT) RETURN $ERROR;
+		RETURN $SUCCESS;
+	}
+	
+	FUNCTION adminAssignNodeGroup($MYSQLI, $DATA)
+	{
+		$ERROR = '{"message": "ADMINCHAGEGROUPBAD"}'; 
+		$SUCCESS = '{"message": "ADMINCHAGEGROUPOK"}';
+		
+		IF(!ISSET($DATA->ip)) RETURN $ERROR;
+		
+		$GROUP = ISSET($DATA->grp) ? Strip($DATA->grp) : NULL;
+								
+		$WHERE =[];
+		$SET = [];
+		
+		FOREACH($DATA->ip AS $VALUE){
+						
+			$SET[] = ['group' => $GROUP];
+			$WHERE[] = ['ip' => Strip($VALUE)];
+		}
+				
+		$RESULT = mysqliUpdate($MYSQLI, 'dr', $SET, $WHERE);
+		
+		IF(!$RESULT) RETURN $ERROR;
+		RETURN $SUCCESS;
+	}
+	
+	FUNCTION adminAssignNodeOffice($MYSQLI, $DATA)
+	{
+		$ERROR = '{"message": "ADMINCHAGEOFFICEBAD"}'; 
+		$SUCCESS = '{"message": "ADMINCHAGEOFFICEOK"}';
+		
+		IF(!ISSET($DATA->ip)) RETURN $ERROR;
+		
+		$GROUP = ISSET($DATA->office) ? Strip($DATA->office) : NULL;
+								
+		$WHERE =[];
+		$SET = [];
+		
+		FOREACH($DATA->ip AS $VALUE){
+						
+			$SET[] = ['office' => $GROUP];
+			$WHERE[] = ['ip' => Strip($VALUE)];
+		}
+				
+		$RESULT = mysqliUpdate($MYSQLI, 'dr', $SET, $WHERE);
+		
+		IF(!$RESULT) RETURN $ERROR;
+		RETURN $SUCCESS;
+	}
+	
+	FUNCTION adminNodesPower($MYSQLI, $DATA)
+	{
+		$ERROR = '{"message": "ADMINCHAGEPOWERBAD"}'; 
+		$SUCCESS = '{"message": "ADMINCHAGEPOWEROK"}';
+		
+		IF(!ISSET($DATA->ip) OR !ISSET($DATA->type) OR !ISSET($DATA->val)) RETURN $ERROR;
+		
+		$TYPE = '';
+		
+		SWITCH($DATA->type){
+			CASE 'rendkw': $TYPE = $DATA->type;
+			BREAK;
+			CASE 'idlekw': $TYPE = $DATA->type;
+			BREAK;
+			DEFAULT: RETURN $ERROR;
+			BREAK;
+		}
+		
+		IF(!IS_NUMERIC($DATA->val)) RETURN $ERROR;
+		
+		$VAL = $DATA->val;
+										
+		$WHERE =[];
+		$SET = [];
+		
+		FOREACH($DATA->ip AS $VALUE){
+						
+			$SET[] = [$TYPE => $VAL];
+			$WHERE[] = ['ip' => Strip($VALUE)];
+		}
+				
+		$RESULT = mysqliUpdate($MYSQLI, 'dr', $SET, $WHERE);
+		
+		IF(!$RESULT) RETURN $ERROR;
+		RETURN $SUCCESS;
+	}
+	
+	FUNCTION adminNodesDescription($MYSQLI, $DATA)
+	{
+		$ERROR = '{"message": "ADMINDESCBAD"}'; 
+		$SUCCESS = '{"message": "ADMINDESCOK"}';
+		
+		IF(!ISSET($DATA->ip)) RETURN $ERROR;
+		
+		$DESC = ISSET($DATA->desc) ? Strip($DATA->desc) : NULL;
+								
+		$WHERE =[];
+		$SET = [];
+		
+		FOREACH($DATA->ip AS $VALUE){
+						
+			$SET[] = ['desc' => $DESC];
+			$WHERE[] = ['ip' => Strip($VALUE)];
+		}
+				
+		$RESULT = mysqliUpdate($MYSQLI, 'dr', $SET, $WHERE);
+		
+		IF(!$RESULT) RETURN $ERROR;
+		RETURN $SUCCESS;
+	}
+	
 	
 	FUNCTION adminNodeDelete($MYSQLI, $DATA)
 	{		
@@ -325,6 +469,29 @@
 		IF(!$RESULT) RETURN $ERROR;
 		RETURN $SUCCESS;		
 	}
+	
+	FUNCTION assignNewGroup($MYSQLI, $DATA)
+	{
+		$ERROR = '{"message": "ADMINGROUPNOTCHANGED"}';
+		$SUCCESS = '{"message": "ADMINGROUPCHANGED"}';
+		
+		IF(!ISSET($DATA->users)) RETURN $ERROR;
+							
+		$WHERE =[];
+		$SET = [];
+				
+		$GROUP = !ISSET($DATA->grp) ? NULL : Strip($DATA->grp);
+		
+		FOREACH($DATA->users AS $VALUE){					
+			$SET[] = ['group' => $GROUP];
+			$WHERE[] = ['user' => Strip($VALUE)];
+		}
+				
+		$RESULT = mysqliUpdate($MYSQLI, 'users', $SET, $WHERE);
+		
+		IF(!$RESULT) RETURN $ERROR;
+		RETURN $SUCCESS;		
+	}
 		
 	
 	FUNCTION adminChangePassword($MYSQLI, $DATA)
@@ -349,12 +516,117 @@
 		RETURN $SUCCESS;
 	}
 	
-	FUNCTION adminServiceDisable($MYSQLI, $DATA)
+	
+	
+	
+	///////////////////////////////////////////////////////
+	// GROUPS
+	///////////////////////////////////////////////////////
+	
+	FUNCTION adminGetGroups($MYSQLI)
+	{				
+		$QUERY = "SELECT * FROM `groups`;";
+		
+		RETURN JSON_ENCODE(mysqliSelect($MYSQLI, $QUERY));
+	}
+	
+	///////////////////////////////////////////////////////
+	// OFFICES
+	///////////////////////////////////////////////////////
+	
+	FUNCTION adminGetOffices($MYSQLI)
+	{				
+		$QUERY = "SELECT * FROM `offices`;";
+		
+		RETURN JSON_ENCODE(mysqliSelect($MYSQLI, $QUERY));
+	}
+	
+	///////////////////////////////////////////////////////
+	// ITEMS
+	///////////////////////////////////////////////////////
+	
+	FUNCTION adminGetServices($MYSQLI)
+	{				
+		$QUERY = "SELECT * FROM services;";
+		
+		RETURN JSON_ENCODE(mysqliSelect($MYSQLI, $QUERY));
+	}
+	
+	
+	FUNCTION adminCheckTable($ITEM)
+	{				
+		$TABLE = '';
+		
+		SWITCH($ITEM) {
+			CASE 'services': $TABLE = $ITEM;
+			BREAK;
+			CASE 'offices': $TABLE = $ITEM;
+			BREAK;
+			CASE 'groups': $TABLE = $ITEM;
+			BREAK;
+			DEFAULT: RETURN FALSE;
+			BREAK;
+		}
+		
+		RETURN $TABLE;
+	}
+	
+	FUNCTION adminItemAdd($MYSQLI, $DATA)
+	{		
+		$ERROR = '{"message": "ADMINITEMNOTADDED"}';
+		$SUCCESS = '{"message": "ADMINITEMADDED"}';
+		
+		IF(!ISSET($DATA->name)) RETURN $ERROR;
+		IF(!ISSET($DATA->item)) RETURN $ERROR;
+		
+		$NAME = Strip($DATA->name);
+		
+		$TABLE = '';
+		
+		$TABLE = adminCheckTable($DATA->item);
+		IF($TABLE === FALSE) RETURN $ERROR;
+		
+		$VALUES = ['name' => $NAME, 'status' => '0'];			
+		$RESULT = mysqliInsert($MYSQLI, $TABLE, $VALUES);
+		
+		IF(!$RESULT) RETURN $ERROR;
+		RETURN $SUCCESS;
+	}
+	
+	FUNCTION adminItemDelete($MYSQLI, $DATA)
+	{		
+		$ERROR = '{"message": "ADMINDELETEBAD"}';
+		$SUCCESS = '{"message": "ADMINDELETEOK"}';
+		
+		IF(!ISSET($DATA->names)) RETURN $ERROR;
+		IF(!ISSET($DATA->item)) RETURN $ERROR;
+		
+		$TABLE = adminCheckTable($DATA->item);
+		IF($TABLE === FALSE) RETURN $ERROR;
+		
+		$ITEMS =[];
+		
+		FOREACH($DATA->names AS $VALUE)
+		{
+			$ITEMS[] = Strip($VALUE);			
+		}
+		
+		$RESULT = mysqliDelete($MYSQLI, $TABLE , $ITEMS, 'name');
+		
+		IF(!$RESULT) RETURN $ERROR;
+		RETURN $SUCCESS;
+	}
+	
+	FUNCTION adminItemDisable($MYSQLI, $DATA)
 	{
 		$ERROR = '{"message": "ADMINSTATUSBAD"}'; 
 		$SUCCESS = '{"message": "ADMINSTATUSOK"}';
 		
 		IF(!ISSET($DATA->names) OR !ISSET($DATA->status)) RETURN $ERROR;
+		IF(!ISSET($DATA->item)) RETURN $ERROR;
+		
+		$TABLE = adminCheckTable($DATA->item);
+		IF($TABLE === FALSE) RETURN $ERROR;
 			
 		$STATUS = 0;		
 		
@@ -369,53 +641,7 @@
 			$WHERE[] = ['name' => Strip($VALUE)];
 		}
 				
-		$RESULT = mysqliUpdate($MYSQLI, 'services', $SET, $WHERE);
-		
-		IF(!$RESULT) RETURN $ERROR;
-		RETURN $SUCCESS;
-	}
-	
-	
-	///////////////////////////////////////////////////////
-	// SERVICES
-	///////////////////////////////////////////////////////
-	
-	FUNCTION adminGetServices($MYSQLI)
-	{				
-		$QUERY = "SELECT * FROM services;";
-		
-		RETURN JSON_ENCODE(mysqliSelect($MYSQLI, $QUERY));
-	}
-	
-	FUNCTION adminServiceAdd($MYSQLI, $DATA)
-	{		
-		$ERROR = '{"message": "ADMINSERVICENOTADDED"}';
-		$SUCCESS = '{"message": "ADMINSERVICEADDED"}';
-		
-		IF(!ISSET($DATA->name)) RETURN $ERROR;
-		$SERVICE = Strip($DATA->name);
-		
-		$VALUES = ['name' => $SERVICE, 'status' => '0'];			
-		$RESULT = mysqliInsert($MYSQLI, 'services', $VALUES);
-		
-		IF(!$RESULT) RETURN $ERROR;
-		RETURN $SUCCESS;
-	}
-	
-	FUNCTION adminServiceDelete($MYSQLI, $DATA)
-	{		
-		$ERROR = '{"message": "ADMINDELETEBAD"}';
-		$SUCCESS = '{"message": "ADMINDELETEOK"}';
-		
-		IF(!ISSET($DATA->names)) RETURN $ERROR;
-		$SERVICES =[];
-		
-		FOREACH($DATA->names AS $VALUE)
-		{
-			$SERVICES[] = Strip($VALUE);			
-		}
-		
-		$RESULT = mysqliDelete($MYSQLI, 'services', $SERVICES, 'name');
+		$RESULT = mysqliUpdate($MYSQLI, $TABLE, $SET, $WHERE);
 		
 		IF(!$RESULT) RETURN $ERROR;
 		RETURN $SUCCESS;
