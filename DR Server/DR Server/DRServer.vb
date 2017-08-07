@@ -185,6 +185,22 @@ Module DRServer
         ComputerName = System.Net.Dns.GetHostName
         Return ComputerName
     End Function
+    Public Class MemoryManagement
+
+        Private Declare Function SetProcessWorkingSetSize Lib "kernel32.dll" ( _
+            ByVal process As IntPtr, _
+            ByVal minimumWorkingSetSize As Integer, _
+            ByVal maximumWorkingSetSize As Integer) As Integer
+
+        Public Shared Sub FlushMemory()
+            GC.Collect()
+            GC.WaitForPendingFinalizers()
+            If (Environment.OSVersion.Platform = PlatformID.Win32NT) Then
+                SetProcessWorkingSetSize(Process.GetCurrentProcess().Handle, -1, -1)
+            End If
+        End Sub
+
+    End Class
     Public Function GetCpuData() As String
 
         Dim s As String = CreateObject("WScript.Shell").RegRead("HKEY_LOCAL_MACHINE\HARDWARE\DESCRIPTION\System\CentralProcessor\0\ProcessorNameString")
@@ -543,6 +559,9 @@ Module DRServer
                     busyCnt = 0
                 End If
             End If
+
+            MemoryManagement.FlushMemory()
+
         End If
         timeStamp2 = DateTime.Now.Ticks
     End Sub
