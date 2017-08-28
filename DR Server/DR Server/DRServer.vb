@@ -112,6 +112,7 @@ Module DRServer
     Dim cpuLoad3dmax As String = 0
     Dim cpuCount As Int16 = 0
     Dim busyCnt As Int16 = 0
+    Dim flushMemoryCnt As Int16 = 0
     Dim BACKBURNERSRV As String = ""
     Dim UPDATERATE As Int32 = 3
     Dim DEBUG As Int32 = 0
@@ -209,6 +210,14 @@ Module DRServer
         s = s.Replace("  ", "")
         Return s
 
+    End Function
+    Public Function is3dsMaxRunning() As Boolean
+        For Each prog As Process In Process.GetProcesses
+            If prog.ProcessName = "3dsmax" Then
+                Return True
+            End If
+        Next
+        Return False
     End Function
     Public Function GetComputerIP() As String
         Dim GetIPv4Address As String = String.Empty
@@ -560,7 +569,12 @@ Module DRServer
                 End If
             End If
 
-            MemoryManagement.FlushMemory()
+            If flushMemoryCnt >= 1440 And is3dsMaxRunning() = False Then
+                flushMemoryCnt = 0
+                MemoryManagement.FlushMemory()
+            End If
+
+            flushMemoryCnt += 1
 
         End If
         timeStamp2 = DateTime.Now.Ticks
