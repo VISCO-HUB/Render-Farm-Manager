@@ -275,8 +275,16 @@ Module DRServer
     Public Function getGlobal()
         Dim r As String = sendWebGetReques(URL & "exeGetGlobal.php?ip=" & GetComputerIP())
 
-        Dim s As String() = r.Split(New Char() {"|"c})
+        'Dim s As String() = r.Split(New Char() {"|"c})
+        Dim s(4) As String
+        s = Split(r, "|")
+
+        If (r = "ERROR") Then
+            ReDim s(4)
+        End If
+
         Dim o(3) As Int64
+
         o(0) = If(s(0) = "1", 1, 0)
         o(1) = If(s(1) IsNot "", s(1), 120)
         o(2) = If(s(2) = "0", 0, 1)
@@ -569,7 +577,8 @@ Module DRServer
                 End If
             End If
 
-            If flushMemoryCnt >= 1440 And is3dsMaxRunning() = False Then
+            'Every 24 h
+            If flushMemoryCnt >= 360 And is3dsMaxRunning() = False Then
                 flushMemoryCnt = 0
                 MemoryManagement.FlushMemory()
             End If
