@@ -7,6 +7,8 @@ Imports System.IO
 Imports System.ServiceProcess
 Imports System.Text.RegularExpressions
 
+
+
 Imports System.Timers
 Public Class clsIni
     ' API functions
@@ -117,8 +119,10 @@ Module DRServer
     Dim UPDATERATE As Int32 = 3
     Dim DEBUG As Int32 = 0
     Dim cpuNumber As Int32 = Convert.ToInt32(Environment.ProcessorCount.ToString)
+    Dim updateExe As String = "DR Updater.exe"
+    Dim selfPath As String = System.AppDomain.CurrentDomain.BaseDirectory
 
-    Dim objIniFile As New clsIni(System.AppDomain.CurrentDomain.BaseDirectory + "\settings.ini")
+    Dim objIniFile As New clsIni(System.AppDomain.CurrentDomain.BaseDirectory & "\settings.ini")
     Dim URL As String = String.Empty
     Dim servicesList As String = String.Empty
 
@@ -136,6 +140,11 @@ Module DRServer
             End If
         End Sub
     End Class
+
+    Private Function GetCurrVersion()
+        Dim asm As System.Reflection.Assembly = System.Reflection.Assembly.GetExecutingAssembly()
+        Return asm.GetName().Version.Major & "." & asm.GetName().Version.Minor & "." & asm.GetName().Version.Build & "." & asm.GetName().Version.Revision
+    End Function
 
     Private Function sendWebRequest(url As String, Data As String)
         Dim request As HttpWebRequest = DirectCast(WebRequest.Create(url), HttpWebRequest)
@@ -174,8 +183,15 @@ Module DRServer
     Private Function sendWebGetReques(url As String)
         Dim resp As String = "ERROR"
         Try
-            resp = New System.Net.WebClient().DownloadString(url)
+            Dim wClient As WebClient = New System.Net.WebClient()
+
+            resp = wClient.DownloadString(url)
             Log.Write("WEB REQUEST: " & url)
+            wClient.Dispose()            
+            GC.Collect()
+            GC.WaitForPendingFinalizers()
+            GC.SuppressFinalize(wClient)
+            wClient = Nothing
         Catch
         End Try
         Log.Write("WEB REQUEST RESPONCE: " & resp)
@@ -296,6 +312,36 @@ Module DRServer
 
         Return sendWebGetReques(URL & "exeDropNode.php?" & getString)
     End Function
+   
+    Public Function startUpdate()
+        Dim REMOTE_UPDATE As String = objIniFile.GetString("MAIN", "REMOTE_UPDATE", "")
+        Dim remoteUpdate As String = Path.Combine(REMOTE_UPDATE, "update\" & updateExe)
+        Dim localUpdate As String = Path.Combine(selfPath, "update\" & updateExe)
+
+        If (REMOTE_UPDATE.Length > 3 And Directory.Exists(REMOTE_UPDATE)) Then
+            Console.WriteLine("START UPDATE")
+            Log.Write("START UPDATE")
+            Try
+                Dim old As String = Path.Combine(selfPath, "update\" & Now.TimeOfDay.TotalMilliseconds & ".old")
+                File.Move(localUpdate, old)
+
+                File.Copy(remoteUpdate, localUpdate)
+                startService(updateExe)
+
+                File.Delete(old)
+
+                Return "OK"
+            Catch copyError As IOException
+                Console.WriteLine(copyError.Message)
+            End Try
+        Else
+            Console.WriteLine("REMOUTE FOLDER NOT EXIST")
+            Log.Write("REMOUTE FOLDER NOT EXIST")
+        End If
+
+        Return "ERROR"
+    End Function
+
     Public Function setData(Optional ByVal isBackBurener As Int16 = 0)
         serviceStatus = String.Empty
         getServices()
@@ -305,7 +351,7 @@ Module DRServer
 
         'Dim Data As String = "{""ip"":""" & GetComputerIP() & """, ""name"":""" & GetComputerName() & """, ""cpu"":""" & cpuLoad & """, ""service"":""" & serviceStatus & """, ""user"":""" & user & """}"
 
-        Dim getString As String = "ip=" & GetComputerIP() & "&name=" & GetComputerName() & "&cpu=" & cpuLoad3dmax & "&3dsmax=" & cpuLoad3dmax & "&cpunumber=" & cpuNumber & "&service=""" & serviceStatus & """" & "&user=" & user & "&ram=" & GetRam() & "&aram=" & GetFreeRam() & "&cpudata=""" & GetCpuData() & """"
+        Dim getString As String = "ip=" & GetComputerIP() & "&name=" & GetComputerName() & "&cpu=" & cpuLoad3dmax & "&3dsmax=" & cpuLoad3dmax & "&cpunumber=" & cpuNumber & "&service=""" & serviceStatus & """" & "&user=" & user & "&ram=" & GetRam() & "&aram=" & GetFreeRam() & "&cpudata=""" & GetCpuData() & """" & "&ver=""" & GetCurrVersion() & """"
 
         Return sendWebGetReques(URL & "exeSetData1.php?" & getString)
         'Return sendWebRequest(URL & "exeSetData.php", Data)
@@ -446,6 +492,11 @@ Module DRServer
                         Log.Write("REBOOT")
                         setData()
                         mstrResponse = rebootNode()
+                    Case "UPDATE"
+                        Console.WriteLine("UPDATE")
+                        Log.Write("UPDATE")
+                        setData()
+                        mstrResponse = startUpdate()
                     Case "EXIT"
                         Console.WriteLine("EXIT")
                         Log.Write("EXIT")
@@ -474,7 +525,7 @@ Module DRServer
             tcpListener.Start()
             output = "WAITING FOR A CONNECTION..."
         Catch e As Exception
-            output = "Error: " + e.ToString()
+            output = "Error: " & e.ToString()
         End Try
         Console.WriteLine(output)
         Console.WriteLine(sep)
@@ -577,9 +628,11 @@ Module DRServer
                 End If
             End If
 
-            'Every 24 h
-            If flushMemoryCnt >= 360 And is3dsMaxRunning() = False Then
+            'Every 5 m
+            If flushMemoryCnt >= 5 And is3dsMaxRunning() = False Then
                 flushMemoryCnt = 0
+                Console.Clear()
+
                 MemoryManagement.FlushMemory()
             End If
 
@@ -587,6 +640,7 @@ Module DRServer
 
         End If
         timeStamp2 = DateTime.Now.Ticks
+
     End Sub
     Dim timeStamp1 As Long = DateTime.Now.Ticks
     Private Sub tickSetData(ByVal sender As Object, ByVal e As System.Timers.ElapsedEventArgs) Handles setDataTimer.Elapsed
@@ -624,6 +678,8 @@ Module DRServer
 
         ' CONSOLE LOG
         Console.WriteLine("START NODE SERVER")
+        Console.WriteLine("")
+        Console.WriteLine("VERSION: " & GetCurrVersion())
         Console.WriteLine("")
         Console.WriteLine("SET REMOTE URL: " & URL)
         Console.WriteLine("SET BACKBURNER SERVICE: " & BACKBURNERSRV)
