@@ -312,7 +312,15 @@ Module DRServer
 
         Return sendWebGetReques(URL & "exeDropNode.php?" & getString)
     End Function
-   
+    Public Function deleteOldFiles(ByVal path As String)
+        Dim fileList As String() = Directory.GetFiles(path, "*.old")
+
+        For Each f As String In fileList
+            File.Delete(f)
+        Next
+
+        Return "OK"
+    End Function
     Public Function startUpdate()
         Dim REMOTE_UPDATE As String = objIniFile.GetString("MAIN", "REMOTE_UPDATE", "")
         Dim remoteUpdate As String = Path.Combine(REMOTE_UPDATE, "update\" & updateExe)
@@ -675,6 +683,8 @@ Module DRServer
         busyTimer.Interval = 60 * 1000 '1 minute
         AddHandler busyTimer.Elapsed, AddressOf tickBusy
         busyTimer.Start()
+
+        deleteOldFiles(selfPath)
 
         ' CONSOLE LOG
         Console.WriteLine("START NODE SERVER")

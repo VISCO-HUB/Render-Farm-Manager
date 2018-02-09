@@ -82,15 +82,15 @@ fn httpGet url =
 
 fn getUserNodes =
 (
-	url = _URL + "vault/mxs/mxsVrayGetUserNodes.php?user=" + getUser()
+	url = _URL + "vault/mxs/mxsVrayGetUserNodes.php?user=" + getUser() + "&time=" + (timeStamp() as string)
 	r = httpGet url
-
+print url
 	return r
 )	
 
 fn getCoronaUserNodes =
 (
-	url = _URL + "vault/mxs/mxsCoronaGetUserNodes.php?user=" + getUser()
+	url = _URL + "vault/mxs/mxsCoronaGetUserNodes.php?user=" + getUser() + "&time=" + (timeStamp() as string)
 	r = httpGet url
 		
 	if(r == "NONODES") do return ""
@@ -101,7 +101,7 @@ fn deleteUser =
 (
 	if(_AUTO_DROP_USER) do 
 	(
-		url = _URL + "vault/mxs/mxsDropUserNodes.php?user=" + getUser()
+		url = _URL + "vault/mxs/mxsDropUserNodes.php?user=" + getUser() + "&time=" + (timeStamp() as string)
 		r = httpGet url
 	)
 )
@@ -186,6 +186,8 @@ fn checkNodesVray =
 	(
 		n = filterString i "-"
 		if(v != n[2]) do continue
+		
+		print ("Use node: " + n[1] + " | Spawner: " + n[2])
 		
 		format (n[1] + " 1 20204\n") to:f
 		spawnersCount += 1

@@ -168,7 +168,6 @@ Module DRUpdater
                 Try
                     File.Move(Path.Combine(selfUpdatePath, fName), old)
 
-                    Console.WriteLine("DELETE: " & old)
                 Catch ex As Exception
                 End Try
             Next
