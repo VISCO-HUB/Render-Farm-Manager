@@ -1,7 +1,7 @@
 
 /*
 	DR User Monitor  for Render Farm Manager
-	1.0.6
+	1.0.7
 	MastaMan 
 */
 
@@ -47,6 +47,7 @@ fn isVray =
 (
 	_Vray = renderers.current
 	if(matchPattern (_Vray as string) pattern:"V_Ray_Adv*") do return true
+	if(matchPattern (_Vray as string) pattern:"V_Ray_Next*") do return true
 	return false
 )
 
@@ -84,7 +85,7 @@ fn getUserNodes =
 (
 	url = _URL + "vault/mxs/mxsVrayGetUserNodes.php?user=" + getUser() + "&time=" + (timeStamp() as string)
 	r = httpGet url
-print url
+
 	return r
 )	
 
@@ -151,14 +152,13 @@ fn checkNodesCorona =
 
 
 fn checkNodesVray =
-(
+(	
 	udr = #()
 	dr_cfg = (getDir #plugcfg) + @"\vray_dr.cfg"
 	u = getUser()		
-	
-	v = getCurrMaxVer()	
-	n = getUserNodes()
 		
+	v = getCurrMaxVer()	
+	n = getUserNodes()		
 	-- Clear config
 	if(n == "NONODES" or n == "ERROR") do 
 	(		
@@ -184,7 +184,7 @@ fn checkNodesVray =
 	
 	for i in (filterString n ";") do 
 	(
-		n = filterString i "-"
+		n = filterString i "|"
 		if(v != n[2]) do continue
 		
 		print ("Use node: " + n[1] + " | Spawner: " + n[2])
@@ -222,7 +222,7 @@ fn checkNodesVray =
 )
 
 fn checkNodes =
-(
+(	
 	_isRendering = true
 	
 	if(globalStatus() != "ONLINE") do return false

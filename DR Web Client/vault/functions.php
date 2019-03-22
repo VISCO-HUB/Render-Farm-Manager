@@ -735,7 +735,7 @@
 				$S = getSrv($ROW->services);
 				$S = PREG_REPLACE('/[a-z\s+]/i', '', $S);
 				
-				$OUT .= $ROW->ip . '-' . $S . ';';							
+				$OUT .= $ROW->name . '|' . $S . ';';							
 			}
 
 			IF(EMPTY($OUT)) $OUT = 'NONODES';
