@@ -717,7 +717,7 @@
 		ECHO $LAST_USED;
 	}
 	
-	FUNCTION mysqliUserNodes($USER)
+	FUNCTION mysqliUserNodes($USER, $USE_IP = FALSE)
 	{
 		$MYSQLI = mysqliConnect();
 		
@@ -735,7 +735,8 @@
 				$S = getSrv($ROW->services);
 				$S = PREG_REPLACE('/[a-z\s+]/i', '', $S);
 				
-				$OUT .= $ROW->name . '|' . $S . ';';							
+				$VAL = $USE_IP ? $ROW->ip : $ROW->name;
+				$OUT .= $VAL . '|' . $S . ';';							
 			}
 
 			IF(EMPTY($OUT)) $OUT = 'NONODES';
@@ -850,7 +851,7 @@
 		}
 		
 		$IP = HTMLSPECIALCHARS($IP);
-			return 'OK'	;
+			//return 'OK'	;
 		$QUERY = 'UPDATE dr SET user=null, job=null WHERE ip="' . $IP . '";';
 		$RESULT = $MYSQLI->query($QUERY);
 						
