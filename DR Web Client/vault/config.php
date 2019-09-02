@@ -12,7 +12,8 @@
 	// SOCKET DATA
 	$PORT = 55001;	
 	
-	// POWER (KW)	
+	// POWER (KW)
+	
 	$POWER_REND_KW = 250;
 	$POWER_IDLE_KW = 100;
 ?>

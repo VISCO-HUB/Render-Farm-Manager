@@ -1058,12 +1058,16 @@
 		}
 		$S = "";	
 		$QUERY = "SELECT * FROM services;";
+		$A = [];
+		
 		IF ($RESULT = $MYSQLI->query($QUERY)) {
 			
 			WHILE($ROW = $RESULT->fetch_object()) {
-				$S .= $ROW->name . ';';							
+				$A[] = $ROW->name;						
 			}							
 		}
+			
+		$S = IMPLODE(';', $A);
 			
 		$MYSQLI->CLOSE();
 

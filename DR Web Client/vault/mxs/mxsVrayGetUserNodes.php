@@ -8,6 +8,7 @@
 	{
 		$USER = HTMLSPECIALCHARS($USER);
 		
+		// Set true because "problem client disconnected"
 		ECHO mysqliUserNodes($USER, TRUE);		
 	}
 	ELSE

@@ -78,7 +78,7 @@
 <br style="clear: both"><br>
 
 <div class="col-md-6 col-sm-6 col-lg-6" >
-	<h3>Nodes Reserved By User</h3>
+	<h3 style="height:60px">Nodes Reserved By User</h3>
 	<canvas id="bar" class="chart-doughnut" chart-data="dataUserEmpl" chart-labels="labelsUserEmpl" chart-dataset-override="datasetOverrideUserEmpl" chart-options="optionsUserEmpl" chart-colors="labelsColorsUserEmpl"> </canvas>
 	<ul class="legend">
 		<li ng-repeat="l in labelsUserEmpl"><span class="color" ng-style="{'background-color': labelsColorsUserEmpl[$index]}"></span>{{l}}: <b>{{dataUserEmpl[$index]}}</b></li>
@@ -86,7 +86,7 @@
 </div>
 
 <div class="col-md-6 col-sm-6 col-lg-6" >
-	<h3>Rendering Nodes By Offices/Groups</h3>
+	<h3 style="height:60px">Rendering Nodes By Offices/Groups</h3>
 	<canvas id="bar" class="chart-doughnut" chart-data="dataRenderOffice" chart-labels="labelsRenderOffice" chart-dataset-override="datasetOverrideRenderOffice" chart-options="optionsRenderOffice" chart-colors="labelsColorsRenderOffice"> </canvas>
 	<ul class="legend">
 		<li ng-repeat="l in labelsRenderOffice"><span class="color" ng-style="{'background-color': labelsColorsRenderOffice[$index]}"></span>{{l}}: <b>{{dataRenderOffice[$index]}}</b></li>
@@ -97,7 +97,8 @@
 <h1>Statistics</h1>
 <hr>
 <div class="col-md-12 col-sm-12 col-lg-12" >
-<div class="row"> 
+<div style="min-height: 55px">
+<div class="row" autofloat="true"> 
 	<div class="btn-group" uib-dropdown>
 		<button id="btn-append-to-single-button" type="button" class="btn btn-lg btn-primary" uib-dropdown-toggle>
 		{{office_filter}} <span class="caret"></span>
@@ -117,8 +118,7 @@
         <label class="btn btn-lg btn-success" ng-click="changePeriod('Year')" ng-model="period" uib-btn-radio="'Year'" uib-uncheckable="uncheckable">Year</label>
 		<label class="btn btn-lg btn-success" ng-click="changePeriod('Custom')" ng-model="period" uib-btn-radio="'Custom'" uib-uncheckable="uncheckable">Custom</label> 
     </div>
-</div>	
-<div ng-show="period=='Custom'" class="row">
+	<div ng-show="period=='Custom'" class="row">
 <br>
  <div class="col-md-6">	
 		From:
@@ -135,8 +135,9 @@
 			<input type="date" id="party" name="party" class="form-control" ng-model="dt.to" ng-change="changePeriod('Custom')" required>                    
         </p>
       </div>
+</div>		
 </div>	
-
+</div>
 <br>
 <div style="clear: both">
 	<h3>Render Time <i>(Hours per {{period}} - {{office_filter}} Nodes)</i></h3>
@@ -147,7 +148,7 @@
 <br style="clear: both">
 
 <div class="col-md-6 col-sm-6 col-lg-6" >
-	<h3>Render Farm Usage <i>(Hours per {{period}} - {{office_filter}} Nodes)</i></h3>
+	<h3 style="height:60px">Render Farm Usage <i>(Hours per {{period}} - {{office_filter}} Nodes)</i></h3>
 	<canvas id="bar" class="chart-doughnut" chart-data="dataFarmEmpl" chart-labels="labelsFarmEmpl" chart-dataset-override="datasetOverrideFarmEmpl" chart-options="optionsFarmEmpl" chart-colors="labelsColorsFarmEmpl"> </canvas>
 	<ul class="legend">
 		<li ng-repeat="l in labelsFarmEmpl"><span class="color" ng-style="{'background-color': labelsColorsFarmEmpl[$index]}"></span>{{l}}: <b>{{dataFarmEmpl[$index]}}</b> (Hrs)</li>
@@ -155,7 +156,7 @@
 </div>
 
 <div class="col-md-6 col-sm-6 col-lg-6" >
-	<h3>Power Consumption <i>(kW per {{period}} - {{office_filter}} Nodes)</i></h3>
+	<h3 style="height:60px">Power Consumption <i>(kW per {{period}} - {{office_filter}} Nodes)</i></h3>
 	<canvas id="bar" class="chart-doughnut" chart-data="dataFarmPowerEmpl" chart-labels="labelsFarmPowerEmpl" chart-dataset-override="datasetOverrideFarmPowerEmpl" chart-options="optionsFarmPowerEmpl" chart-colors="labelsColorsFarmPowerEmpl"> </canvas>
 	<ul class="legend">
 		<li ng-repeat="l in labelsFarmPowerEmpl"><span class="color" ng-style="{'background-color': labelsColorsFarmPowerEmpl[$index]}"></span>{{l}}: <b>{{dataFarmPowerEmpl[$index]}}</b> <i>(kW)</i></li>
@@ -181,8 +182,8 @@
 		<td>{{n.rend}}</td>
 		<td>{{n.idle}}</td>
 		<td>			
-			<div ng-style="{'width': n.rend_p + '%'}" class="load-percent green">{{n.rend_p > 6 ? n.rend_p + '%' : '&nbsp'}}</div> 
-			<div ng-style="{'width': n.idle_p + '%'}" class="load-percent red">{{n.rend_p > 92 ? '&nbsp' : n.idle_p + '%'}}</div>
+			<div ng-style="{'width': (n.rend_p + '%')}" class="load-percent green">{{n.rend_p > 6 ? n.rend_p + '%' : '&nbsp'}}</div> 
+			<div ng-style="{'width': (n.idle_p + '%')}" class="load-percent red">{{n.rend_p > 92 ? '&nbsp' : n.idle_p + '%'}}</div>
 		</td>
 	</tr>
 </table>

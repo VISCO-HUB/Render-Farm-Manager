@@ -35,6 +35,7 @@
 		<th></th>
 		<th ng-click="orderByParam('user')"><span>User</span> <span class="glyphicon" ng-show="orderNodes == 'user'" ng-class="reverse ? 'glyphicon-triangle-bottom' : 'glyphicon-triangle-top'" aria-hidden="true"></span></th>		
 		<th ng-click="orderByParam('services')"><span>Service</span> <span class="glyphicon" ng-show="orderNodes == 'services'" ng-class="reverse ? 'glyphicon-triangle-bottom' : 'glyphicon-triangle-top'" aria-hidden="true"></span></th>		
+		<th>VERSION</th>
 		<th class="text-center">RAM</th>
 		<th ng-click="orderByParam('cpu')" class="text-center"><span>CPU</span> <span class="glyphicon" ng-show="orderNodes == 'cpu'" ng-class="reverse ? 'glyphicon-triangle-bottom' : 'glyphicon-triangle-top'" aria-hidden="true"></span></th>
 	</tr>
@@ -53,7 +54,10 @@
 		<td >
 			<span ng-show="node.services">{{node.services}}</span>
 			<span ng-show="!node.services">None</span>
-		</td>		
+		</td>
+		<td >
+			{{node.ver}}
+		</td>			
 		<td class="text-center text-primary">	
 			{{node.ram}}
 		</td>
@@ -108,8 +112,8 @@
 		<li ng-repeat="otherUser in otherUsers"><a href="" ng-click="adminDropNodes(otherUser)" tooltip-placement="left" uib-tooltip="This action will drop nodes for {{otherUser}}."><span class="glyphicon glyphicon-ban-circle" aria-hidden="true"></span> Drop all nodes for "<strong>{{otherUser}}</strong>"</a></li>        		
 		<li ng-show="!otherUsers.length"><a>No actions</a></li>
 		<li ng-show="otherUsers.length" class="divider"></li>
-		<li ng-show="otherUsers.length"><a href="" ng-click="kickSelectedNodes()" tooltip-placement="left" uib-tooltip="This action will kick user for selected node and stop all services."><span class="glyphicon glyphicon-share" aria-hidden="true"></span> Kick Selected Nodes</a></li>        		
-	  </ul>
+		<li ng-show="otherUsers.length"><a href="" ng-click="kickSelectedNodes()" tooltip-placement="left" uib-tooltip="This action will kick user for selected node and stop all services."><span class="glyphicon glyphicon-share" aria-hidden="true"></span> Kick Selected Nodes</a></li>        				
+	  </ul> 
 	</div>
 </div>
 </div>

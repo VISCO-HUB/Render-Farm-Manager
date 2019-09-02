@@ -313,6 +313,7 @@ tr.reserved.active td:not(:last-child), tr.reserved.active td a{
 	right: 0;		
 	padding-bottom: 10px;
 	padding-top: 10px;
+	margin: 0 auto;
 }
 
 .float-fix {
@@ -720,7 +721,7 @@ ul.legend {
 }
 
 .load-percent {
-		display: block;
+	display: block;
 	float: left;
 	line-height: 36px !important;
 	text-align: center;
@@ -728,4 +729,12 @@ ul.legend {
 	overflow: hidden;
 	margin: 0;
 	padding: 0;
+    transition: 1.5s linear all;
+	width: 0;
 }
+
+.load-percent.ng-enter {
+	width: 0;
+	transition: 1.5s linear all;
+}
+

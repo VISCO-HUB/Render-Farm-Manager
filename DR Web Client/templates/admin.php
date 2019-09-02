@@ -245,6 +245,8 @@
 				<button type="button" class="btn btn-danger" data-toggle="dropdown">Maintenance</button>
 				<button type="button" class="btn btn-danger dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"> <span class="caret"></span> <span class="sr-only">Toggle Dropdown</span> </button>
 				<ul class="dropdown-menu" aria-labelledby="dropdownMenu1">
+					<li><a href="" ng-click="adminUpdateNodes()"><span class="glyphicon glyphicon-download text-success" aria-hidden="true"></span> Update DR Server.exe</a></li>
+					<li class="divider"></li>
 					<li><a href="" ng-click="adminRebootNodes()"><span class="glyphicon glyphicon-repeat text-danger" aria-hidden="true"></span> Reboot Nodes</a></li>
 					<li class="divider"></li>
 					<li><a href="" ng-click="adminNodeDelete()"><span class="glyphicon glyphicon-remove text-danger" aria-hidden="true"></span> Remove Nodes</a></li>

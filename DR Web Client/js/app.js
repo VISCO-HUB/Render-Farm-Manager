@@ -90,6 +90,26 @@ app.directive("float", function ($window) {
     };
 });
 
+
+app.directive("autofloat", function ($window) {
+    return function(scope, element, attrs) {
+      	
+		offsetTop = 0;
+		
+        angular.element($window).bind("scroll", function() {
+			tmpOffset = $(element[0]).offset().top - 10;
+			if(!element[0].classList.contains('float')) {offsetTop = tmpOffset}
+							
+            if (this.pageYOffset >= offsetTop) {                 
+                element.addClass('float container');
+             } else {
+                element.removeClass('float container'); 
+             }
+            scope.$apply();
+        });
+    };
+});
+
 app.directive("nodeInfo", function($rootScope) {	 
     return {
         templateUrl : 'templates/node-info.html'
@@ -127,6 +147,10 @@ app.controller("statisticCtrl", function ($scope, vault, admin, $timeout, $inter
 		'usersrend': 0,
 		'topuser': 'N/A'
 	};
+	
+	$scope.loadClass = function(t) {
+		return 'load-' + t;
+	}
 	
 	$scope.lastWeek = new Date();
 	$scope.lastWeek.setDate($scope.lastWeek.getDate() - 7);
@@ -779,6 +803,17 @@ app.controller("adminCtrl", function($scope, $rootScope, admin, $routeParams){
 		$scope.sendCmd('STOPSERVICES');
 	}
 	
+	$scope.adminUpdateNodes = function() {
+			
+		if(!confirm('Do you really want to update DR Server for selected nodes?')){
+			return false;
+		}
+		
+		admin.showMsg('ADMINUPDATE');
+		
+		$scope.sendCmd('UPDATE');
+	}
+	
 	$scope.adminRebootNodes = function(){
 		
 		if(!confirm('Do you really want to reboot selected nodes?')){
@@ -919,6 +954,7 @@ app.controller("homeCtrl", function ($scope, vault, admin, $timeout, $interval, 
 	{		
 		vault.dropSelectedNodes();	
 	};
+		
 	
 	$scope.kickSelectedNodes = function() 
 	{
@@ -1127,6 +1163,10 @@ app.service('admin', function($http, $rootScope, $timeout, $interval, $timeout) 
 			case 'ADMINSTOPSERVICE':  $rootScope.showMsg.warn = 'Try to force stop all services on selected nodes!';
 			break;	
 			case 'ADMINREBOOT':  $rootScope.showMsg.warn = 'Try to force reboot selected nodes!';
+			break;
+			case 'ADMINUPDATE':  $rootScope.showMsg.warn = 'Try to force update DR Server on selected nodes!';
+			break;
+			case 'NONODES':  $rootScope.showMsg.error = 'Please select at least one node!';
 			break;			
 			case 'ERROR': $rootScope.showMsg.error = 'Error! Can`t receive responce from server!';
 			break;
@@ -1523,7 +1563,7 @@ app.service('vault', function($http, $rootScope, $timeout, $interval, admin, $ro
 					$rootScope.showMsg.error = 'No nodes reserved!';
 				}
 			break;
-			case 'NONODES':  $rootScope.showMsg.warn = 'Please select at leaset one node!';
+			case 'NONODES':  $rootScope.showMsg.error = 'Please select at leaset one node!';
 			break;
 			case 'NONODESFORDROP':  $rootScope.showMsg.warn = 'You have no reserved nodes!';
 			break;
@@ -1624,58 +1664,58 @@ app.service('vault', function($http, $rootScope, $timeout, $interval, admin, $ro
 		var json = {'page': 'main', 'period': period, 'dt': dt, 'office': office_filter};
 		HttpPost('getStatistic', json).then(function(r){			
 			
-			$timeout(function(){
-				$rootScope.statistic = r.data;
-				
-				$rootScope.labelsMonthRenderTime = [];
-				$rootScope.dataMonthRenderTime = [];
-				if(r.data.rendertime) {
-					$rootScope.dataMonthRenderTime = [r.data.rendertime.data];
-					$rootScope.labelsMonthRenderTime = r.data.rendertime.label;
-				}
-				
-				$rootScope.dataUserEmpl = [];
-				$rootScope.labelsUserEmpl = [];
-				if(r.data.renderbyuser) {
-					$rootScope.dataUserEmpl = r.data.renderbyuser.data;
-					$rootScope.labelsUserEmpl = r.data.renderbyuser.label;
-				}
-				
-				$rootScope.dataFarmEmpl = [];
-				$rootScope.labelsFarmEmpl = [];
-				if(r.data.rendertime && r.data.rendertime.empl) {
-					$rootScope.dataFarmEmpl = r.data.rendertime.empl.data;
-					$rootScope.labelsFarmEmpl = r.data.rendertime.empl.label;
-				}
-				
-				$rootScope.dataFarmPowerEmpl = [];
-				$rootScope.labelsFarmPowerEmpl = [];
-				if(r.data.rendertime && r.data.rendertime.power) {
-					$rootScope.dataFarmPowerEmpl = r.data.rendertime.power.data;
-					$rootScope.labelsFarmPowerEmpl = r.data.rendertime.power.label;
-				}
-				
-				if(r.data.rendertime && r.data.rendertime.bynode) {
-					$rootScope.dataFarmByNodeEmpl = r.data.rendertime.bynode;
-				}
-				
-				$rootScope.dataRenderOffice = [];
-				$rootScope.labelsRenderOffice = [];		
-				//$rootScope.labelsColorsRenderOffice = [];
-				if(r.data.rendbyoffice) {
-					$rootScope.dataRenderOffice = r.data.rendbyoffice.data;
-					$rootScope.labelsRenderOffice = r.data.rendbyoffice.label;
-					/*angular.forEach($rootScope.labelsRenderOffice, function(item, key) {
-						var c = $rootScope.stringToColour(item);
-						$rootScope.labelsColorsRenderOffice.push(c);
-					});*/
-				}
-				
-				
-				$rootScope.dataFarmUsage = [r.data.farmrender, r.data.farmidle];
-				$rootScope.labelsFarmUsage = ['Rendering Nodes (' + r.data.farmusage + '%)', 'Stand Idle (' + r.data.farmunused + '%)'];
-				console.log(r.data)
-			}, 50);
+		
+			$rootScope.statistic = r.data;
+			
+			$rootScope.labelsMonthRenderTime = [];
+			$rootScope.dataMonthRenderTime = [];
+			if(r.data.rendertime) {
+				$rootScope.dataMonthRenderTime = [r.data.rendertime.data];
+				$rootScope.labelsMonthRenderTime = r.data.rendertime.label;
+			}
+			
+			$rootScope.dataUserEmpl = [];
+			$rootScope.labelsUserEmpl = [];
+			if(r.data.renderbyuser) {
+				$rootScope.dataUserEmpl = r.data.renderbyuser.data;
+				$rootScope.labelsUserEmpl = r.data.renderbyuser.label;
+			}
+			
+			$rootScope.dataFarmEmpl = [];
+			$rootScope.labelsFarmEmpl = [];
+			if(r.data.rendertime && r.data.rendertime.empl) {
+				$rootScope.dataFarmEmpl = r.data.rendertime.empl.data;
+				$rootScope.labelsFarmEmpl = r.data.rendertime.empl.label;
+			}
+			
+			$rootScope.dataFarmPowerEmpl = [];
+			$rootScope.labelsFarmPowerEmpl = [];
+			if(r.data.rendertime && r.data.rendertime.power) {
+				$rootScope.dataFarmPowerEmpl = r.data.rendertime.power.data;
+				$rootScope.labelsFarmPowerEmpl = r.data.rendertime.power.label;
+			}
+			
+			if(r.data.rendertime && r.data.rendertime.bynode) {
+				$rootScope.dataFarmByNodeEmpl = r.data.rendertime.bynode;
+			}
+			
+			$rootScope.dataRenderOffice = [];
+			$rootScope.labelsRenderOffice = [];		
+			//$rootScope.labelsColorsRenderOffice = [];
+			if(r.data.rendbyoffice) {
+				$rootScope.dataRenderOffice = r.data.rendbyoffice.data;
+				$rootScope.labelsRenderOffice = r.data.rendbyoffice.label;
+				/*angular.forEach($rootScope.labelsRenderOffice, function(item, key) {
+					var c = $rootScope.stringToColour(item);
+					$rootScope.labelsColorsRenderOffice.push(c);
+				});*/
+			}
+			
+			
+			$rootScope.dataFarmUsage = [r.data.farmrender, r.data.farmidle];
+			$rootScope.labelsFarmUsage = ['Rendering Nodes (' + r.data.farmusage + '%)', 'Stand Idle (' + r.data.farmunused + '%)'];
+			console.log(r.data)
+			
 		});		
 	}
 	
@@ -1762,6 +1802,8 @@ app.service('vault', function($http, $rootScope, $timeout, $interval, admin, $ro
 	var sendCmd = function(cmd)
 	{
 		var a = $rootScope.dr;
+		var b = [];
+		
 		
 		for(var i = 0; i < a.length; i++)  
 		{			
@@ -1769,9 +1811,20 @@ app.service('vault', function($http, $rootScope, $timeout, $interval, admin, $ro
 			var user = a[i].user;
 			if($rootScope.userInfo && user === $rootScope.userInfo.user && $rootScope.checkModel[ip] == true)
 			{
-				socket(ip, cmd);	
+				b.push(ip);		
 			}			
 		}	
+				
+		if(b.length == 0) {			
+			showMsg('NONODES');
+			$rootScope.startingSpawners = false;
+			return false;
+		}
+		
+		angular.forEach(b, function(value, key){						
+			socket(value, cmd);
+		});
+			
 	}
 	
 	// SEND CHALLANGE	
@@ -1793,8 +1846,8 @@ app.service('vault', function($http, $rootScope, $timeout, $interval, admin, $ro
 	}
 	var startService = function(name)
 	{
-		sendCmd('STARTSERVICE:' + name);
 		showMsg('STARTSERVICE', name);
+		sendCmd('STARTSERVICE:' + name);		
 	}
 	// REBOOT NODE
 	var rebootNodes = function()
@@ -1961,7 +2014,7 @@ app.service('vault', function($http, $rootScope, $timeout, $interval, admin, $ro
 				
 		admin.adminSendEmail(c, s, 3, [user]);		
 	}
-	
+		
 	var kickSelectedNodes = function()
 	{	
 		var nodes = $rootScope.checkResults;
@@ -2052,10 +2105,10 @@ app.service('vault', function($http, $rootScope, $timeout, $interval, admin, $ro
 	logOut: logOut,
 	getNodes: getNodes,
 	dropNodes: dropNodes,
-	rebootNodes: rebootNodes,
+	rebootNodes: rebootNodes,	
 	showMsg: showMsg,
-	isIE: isIE,
 	adminDropNodes: adminDropNodes,
+	isIE: isIE,	
 	getServices: getServices,
 	getLastNodes: getLastNodes,
 	dropSelectedNodes: dropSelectedNodes,
