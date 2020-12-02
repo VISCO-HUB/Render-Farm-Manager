@@ -15,7 +15,18 @@ global _URL = ""
 global _CHK = 0
 global _AUTO_DROP_USER = false
 global _isRendering = false
+	
+_URL = getINISetting _DR_INI "MAIN" "URL"
 
+fn clearVrayDr = (
+	dr_cfg = (getDir #plugcfg) + @"\vray_dr.cfg"
+	deleteFile dr_cfg
+	f = openFile dr_cfg mode: "wt"
+	format ("") to:f
+	flush f
+	close f
+)
+	
 fn shutdown = 
 (
 	dialogMonitorOps.unregisterNotification id:#closeDrWindow
@@ -25,6 +36,7 @@ fn shutdown =
 	callbacks.removescripts id:#fwdUserIni2
 	callbacks.removescripts id:#fwdUserIni3
 	callbacks.removescripts id:#fwdPreRender
+	callbacks.removescripts id:#fwdPostRender
 )
 
 fn reload = 
@@ -99,6 +111,8 @@ fn getCoronaUserNodes =
 
 fn deleteUser =
 (
+	clearVrayDr()
+	
 	if(_AUTO_DROP_USER) do 
 	(
 		url = _URL + "vault/mxs/mxsDropUserNodes.php?user=" + getUser() + "&time=" + (timeStamp() as string)
@@ -155,21 +169,16 @@ fn checkNodesVray =
 	udr = #()
 	dr_cfg = (getDir #plugcfg) + @"\vray_dr.cfg"
 	u = getUser()		
-		
+	
+	clearVrayDr()
+	
 	v = getCurrMaxVer()	
-	n = getUserNodes()		
+	n = getUserNodes()
 	-- Clear config
+	
 	if(n == "NONODES" or n == "ERROR") do 
-	(		
+	(				
 		--distributedOnVray false
-		
-		deleteFile dr_cfg
-		
-		f = openFile dr_cfg mode: "wt"
-		format ("") to:f
-		flush f
-		close f	
-		
 		return false
 	)
 
@@ -237,11 +246,6 @@ fn checkNodes =
 	)
 )
 
-fn renderEnd=
-(
-	_isRendering = false
-)	
-
 fn blockDr =
 (															
 	local hwnd = dialogMonitorOps.getWindowHandle()
@@ -259,7 +263,7 @@ fn blockDr =
 		if(globalStatus() == "ONLINE") then
 		(
 			UIAccessor.CloseDialog hwnd	
-					
+			
 			try(fileIn (_DR_PATH  + _DR_RUN))catch(messageBox "Lost network connection!" title: "Warning")	
 		)
 		else
@@ -271,29 +275,38 @@ fn blockDr =
 	return true
 )	
 
+fn renderEnd = (
+	clearVrayDr()
+	_isRendering = false
+)	
+
+fn initCallbacks = (
+	callbacks.removescripts id:#fwdUserIni1
+	callbacks.addScript #systemPostReset "deleteUser()" id:#fwdUserIni1 persistent:false	
+
+	callbacks.removescripts id:#fwdUserIni2
+	callbacks.addScript #systemPostNew "deleteUser()" id:#fwdUserIni2 persistent:false	
+
+	callbacks.removescripts id:#fwdUserIni3
+	callbacks.addScript #preSystemShutdown "deleteUser()" id:#fwdUserIni3 persistent:false	
+
+	callbacks.removescripts id:#fwdPreRender
+	callbacks.addScript #preRender "checkNodes()" id:#fwdPreRender persistent:false
+
+	callbacks.removescripts id:#fwdPostRender
+	callbacks.addScript #postRender "renderEnd()" id:#fwdPostRender persistent:false
+)
+
+initCallbacks()
+
 rollout _DR_MONITOR ""
 (
 	timer tmrRegisterNotifications "" active: true interval: 1000
 	
 	on _DR_MONITOR open do
 	(	
-		_URL = getINISetting _DR_INI "MAIN" "URL"
+		initCallbacks()
 		
-		callbacks.removescripts id:#fwdUserIni1
-		callbacks.addScript #systemPostReset "deleteUser()" id:#fwdUserIni1 persistent:false	
-		
-		callbacks.removescripts id:#fwdUserIni2
-		callbacks.addScript #systemPostNew "deleteUser()" id:#fwdUserIni2 persistent:false	
-		
-		callbacks.removescripts id:#fwdUserIni3
-		callbacks.addScript #preSystemShutdown "deleteUser()" id:#fwdUserIni3 persistent:false	
-		
-		callbacks.removescripts id:#fwdPreRender
-		callbacks.addScript #preRender "checkNodes()" id:#fwdPreRender persistent:false
-		
-		callbacks.removescripts id:#fwdPostRender
-		callbacks.addScript #postRender "renderEnd()" id:#fwdPostRender persistent:false
-						
 		SetDialogPos _DR_MONITOR [-1000,0]						
 	)
 	
