@@ -1,7 +1,7 @@
 
 /*
 	DR User Monitor  for Render Farm Manager
-	1.0.7
+	1.0.8
 	MastaMan 
 */
 
@@ -46,15 +46,14 @@ fn getUser = sysInfo.username
 fn isVray =
 (
 	_Vray = renderers.current
-	if(matchPattern (_Vray as string) pattern:"V_Ray_Adv*") do return true
-	if(matchPattern (_Vray as string) pattern:"V_Ray_Next*") do return true
+    if(matchPattern (_Vray as string) pattern:"*V_Ray*") do return true
 	return false
 )
 
 fn isCorona =
 (
 	_Corona = renderers.current
-	if(matchPattern (_Corona as string) pattern:"Corona*") do return true
+	if(matchPattern (_Corona as string) pattern:"*Corona*") do return true
 	return false
 )
 
