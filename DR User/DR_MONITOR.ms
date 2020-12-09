@@ -1,7 +1,7 @@
 
 /*
 	DR User Monitor  for Render Farm Manager
-	1.0.8
+	1.0.9
 	MastaMan 
 */
 
@@ -18,13 +18,30 @@ global _isRendering = false
 	
 _URL = getINISetting _DR_INI "MAIN" "URL"
 
+fn isVray =
+(
+	_Vray = renderers.current
+    if(matchPattern (_Vray as string) pattern:"*V_Ray*") do return true
+	return false
+)
+
+fn isDistributedVray = (
+	_Vray = renderers.current
+	if(isVray()) do return _Vray.system_distributedRender
+	return false
+)
+	
 fn clearVrayDr = (
+	if(not isDistributedVray()) do return false
+	
 	dr_cfg = (getDir #plugcfg) + @"\vray_dr.cfg"
 	deleteFile dr_cfg
 	f = openFile dr_cfg mode: "wt"
 	format ("") to:f
 	flush f
 	close f
+		
+	print "vray_dr.cfg cleared!"
 )
 	
 fn shutdown = 
@@ -54,13 +71,6 @@ fn getCurrMaxVer =
 )
 
 fn getUser = sysInfo.username
-
-fn isVray =
-(
-	_Vray = renderers.current
-    if(matchPattern (_Vray as string) pattern:"*V_Ray*") do return true
-	return false
-)
 
 fn isCorona =
 (
